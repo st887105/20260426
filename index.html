@@ -2,694 +2,477 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>🎨 生圖工作室</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gpt-image-2 生圖工具</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
-
-  :root {
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --surface2: #242424;
-    --border: #2e2e2e;
-    --accent: #ff6b35;
-    --accent2: #ffd166;
-    --text: #f0f0f0;
-    --text2: #888;
-    --radius: 12px;
-    --success: #06d6a0;
-    --error: #ef476f;
-  }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; color: #1a1a1a; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Noto Sans TC', sans-serif;
-    min-height: 100vh;
-    padding-bottom: 40px;
-  }
+  .header { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+  .header-logo { width: 30px; height: 30px; background: #1a1a1a; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .header-logo svg { width: 16px; height: 16px; }
+  .header h1 { font-size: 15px; font-weight: 600; }
+  .header span { font-size: 12px; color: #aaa; margin-left: 4px; }
 
-  header {
-    background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
+  .main { display: grid; grid-template-columns: 330px 1fr; height: calc(100vh - 55px); }
 
-  .logo {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
+  .sidebar { background: #fff; border-right: 1px solid #e5e5e5; display: flex; flex-direction: column; overflow: hidden; }
 
-  header h1 {
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-  }
+  .mode-tabs { display: flex; border-bottom: 1px solid #e5e5e5; flex-shrink: 0; }
+  .mode-tab { flex: 1; padding: 11px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; border: none; background: none; color: #888; border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .mode-tab.active { color: #1a1a1a; border-bottom-color: #1a1a1a; }
+  .mode-tab:hover:not(.active) { background: #f8f8f8; }
 
-  header small {
-    font-size: 11px;
-    color: var(--text2);
-    font-family: 'Space Mono', monospace;
-    margin-left: auto;
-  }
+  .sidebar-body { padding: 18px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
 
-  .container { max-width: 600px; margin: 0 auto; padding: 20px 16px; }
+  .section-label { font-size: 10px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
 
-  /* API Key section */
-  .api-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 20px;
-  }
+  .api-key-wrap { position: relative; }
+  .api-key-wrap input { width: 100%; padding: 8px 34px 8px 10px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 12px; font-family: monospace; background: #fafafa; color: #1a1a1a; outline: none; transition: border-color 0.15s; }
+  .api-key-wrap input:focus { border-color: #1a1a1a; background: #fff; }
+  .toggle-key { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #bbb; font-size: 12px; }
+  .key-status { font-size: 11px; margin-top: 4px; }
+  .key-status.ok { color: #2d7d46; }
+  .key-status.err { color: #c0392b; }
 
-  .api-section label {
-    font-size: 12px;
-    color: var(--text2);
-    font-family: 'Space Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: block;
-    margin-bottom: 8px;
-  }
+  textarea { width: 100%; padding: 9px 10px; border: 1px solid #e0e0e0; border-radius: 7px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 90px; background: #fafafa; color: #1a1a1a; outline: none; line-height: 1.5; transition: border-color 0.15s; }
+  textarea:focus { border-color: #1a1a1a; background: #fff; }
 
-  .api-row {
-    display: flex;
-    gap: 8px;
-  }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt-group label { display: block; font-size: 11px; color: #888; margin-bottom: 3px; font-weight: 500; }
+  .opt-group select { width: 100%; padding: 6px 8px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 12px; background: #fafafa; color: #1a1a1a; outline: none; cursor: pointer; }
+  .opt-group select:focus { border-color: #1a1a1a; }
+  .opt-group.disabled { opacity: 0.4; pointer-events: none; }
 
-  .api-row input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    outline: none;
-  }
+  .upload-zone { border: 1.5px dashed #d0d0d0; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; position: relative; }
+  .upload-zone:hover { border-color: #aaa; background: #f0f0ee; }
+  .upload-zone.has-file { border-color: #2d7d46; background: #f0faf3; border-style: solid; }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 18px; margin-bottom: 4px; }
+  .upload-text { font-size: 12px; color: #888; }
+  .upload-zone.has-file .upload-text { color: #2d7d46; font-weight: 500; }
+  .upload-preview { width: 100%; max-height: 100px; object-fit: contain; margin-top: 8px; border-radius: 5px; display: none; }
+  .upload-clear { position: absolute; top: 6px; right: 6px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 11px; padding: 2px 6px; cursor: pointer; color: #888; display: none; z-index: 2; }
+  .upload-zone.has-file .upload-clear { display: block; }
 
-  .api-row input:focus { border-color: var(--accent); }
+  .cost-hint { font-size: 11px; color: #888; background: #f5f5f0; padding: 7px 9px; border-radius: 6px; line-height: 1.6; }
+  .cost-hint strong { color: #1a1a1a; }
 
-  .btn-save {
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-    font-family: 'Noto Sans TC', sans-serif;
-  }
+  .gen-btn { width: 100%; padding: 10px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .gen-btn:hover { background: #333; }
+  .gen-btn:active { transform: scale(0.98); }
+  .gen-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
 
-  .api-status {
-    margin-top: 8px;
-    font-size: 12px;
-    color: var(--text2);
-  }
-  .api-status.ok { color: var(--success); }
-
-  /* Mode tabs */
-  .tabs {
-    display: flex;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 4px;
-    margin-bottom: 20px;
-    gap: 4px;
-  }
-
-  .tab {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text2);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: 'Noto Sans TC', sans-serif;
-    transition: all 0.2s;
-  }
-
-  .tab.active {
-    background: var(--accent);
-    color: white;
-  }
-
-  /* Form card */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
-  }
-
-  .field { margin-bottom: 16px; }
-
-  .field label {
-    font-size: 12px;
-    color: var(--text2);
-    font-family: 'Space Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: block;
-    margin-bottom: 8px;
-  }
-
-  textarea, select, input[type="text"] {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    color: var(--text);
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 15px;
-    outline: none;
-    transition: border-color 0.2s;
-    -webkit-appearance: none;
-  }
-
-  textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
-  textarea:focus, select:focus, input[type="text"]:focus { border-color: var(--accent); }
-
-  select {
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 36px;
-  }
-
-  .options-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  /* Upload area */
-  .upload-area {
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-
-  .upload-area:hover, .upload-area.drag { border-color: var(--accent); background: rgba(255,107,53,0.05); }
-  .upload-area input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .upload-area .icon { font-size: 32px; margin-bottom: 8px; }
-  .upload-area p { color: var(--text2); font-size: 14px; }
-  .upload-area .preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; display: none; }
-
-  /* Generate button */
-  .btn-gen {
-    width: 100%;
-    padding: 16px;
-    background: linear-gradient(135deg, var(--accent), #ff8c5a);
-    color: white;
-    border: none;
-    border-radius: var(--radius);
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: 'Noto Sans TC', sans-serif;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-
-  .btn-gen:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,107,53,0.3); }
-  .btn-gen:active { transform: translateY(0); }
-  .btn-gen:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  /* Progress */
-  .progress {
-    display: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
-    text-align: center;
-  }
-
-  .spinner {
-    width: 40px; height: 40px;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 12px;
-  }
-
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .progress p { color: var(--text2); font-size: 14px; }
-  .progress .timer { font-family: 'Space Mono', monospace; color: var(--accent); font-size: 20px; margin: 8px 0; }
+  .progress-bar { height: 3px; background: #eee; border-radius: 2px; overflow: hidden; margin-top: 6px; display: none; }
+  .progress-bar.show { display: block; }
+  .progress-fill { height: 100%; background: #1a1a1a; border-radius: 2px; animation: prog 15s ease-out forwards; }
+  @keyframes prog { from { width: 0; } to { width: 88%; } }
 
-  /* Result */
-  .result {
-    display: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
+  .canvas-area { padding: 20px; overflow-y: auto; background: #f5f5f0; }
+  .empty-state { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ccc; gap: 10px; }
+  .empty-state svg { width: 44px; height: 44px; }
+  .empty-state p { font-size: 13px; }
 
-  .result img { width: 100%; display: block; }
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .results-header h2 { font-size: 13px; font-weight: 600; color: #999; }
+  .clear-btn { font-size: 12px; color: #bbb; background: none; border: none; cursor: pointer; padding: 3px 7px; border-radius: 5px; }
+  .clear-btn:hover { background: #eee; color: #666; }
 
-  .result-actions {
-    padding: 12px 16px;
-    display: flex;
-    gap: 8px;
-  }
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
 
-  .btn-dl {
-    flex: 1;
-    padding: 12px;
-    background: var(--surface2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: 'Noto Sans TC', sans-serif;
-    text-align: center;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-  }
+  .img-card { background: #fff; border-radius: 10px; overflow: hidden; border: 1px solid #e8e8e8; }
+  .img-card img { width: 100%; display: block; }
+  .img-card-footer { padding: 9px 11px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f2f2f2; gap: 8px; }
+  .img-meta { font-size: 10px; color: #bbb; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .img-actions { display: flex; gap: 5px; flex-shrink: 0; }
+  .img-btn { padding: 4px 9px; border: 1px solid #e0e0e0; border-radius: 5px; font-size: 11px; cursor: pointer; background: #fff; color: #1a1a1a; text-decoration: none; transition: background 0.1s; white-space: nowrap; }
+  .img-btn:hover { background: #f5f5f0; }
+  .img-btn.edit-trigger { border-color: #b8d4f0; color: #185fa5; }
+  .img-btn.edit-trigger:hover { background: #eaf2fb; }
 
-  .btn-dl.primary {
-    background: var(--success);
-    color: #000;
-    border-color: var(--success);
-  }
+  .error-bar { background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; padding: 9px 12px; font-size: 12px; color: #c0392b; margin-bottom: 14px; display: none; line-height: 1.5; }
+  .error-bar.show { display: block; }
 
-  /* Cost badge */
-  .cost-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: rgba(255,209,102,0.08);
-    border: 1px solid rgba(255,209,102,0.2);
-    border-radius: 8px;
-    margin-bottom: 16px;
-    font-size: 13px;
-    color: var(--accent2);
-  }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-right: 4px; }
+  .badge-edit { background: #e6f1fb; color: #185fa5; }
+  .badge-gen { background: #eaf3de; color: #3b6d11; }
 
-  /* Error */
-  .error-box {
-    display: none;
-    background: rgba(239,71,111,0.1);
-    border: 1px solid rgba(239,71,111,0.3);
-    border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 16px;
-    color: var(--error);
-    font-size: 14px;
-  }
-
-  /* History */
-  .history { margin-top: 24px; }
-  .history h2 { font-size: 14px; color: var(--text2); font-family: 'Space Mono', monospace; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-  .history-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .history-item { aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; }
-  .history-item img { width: 100%; height: 100%; object-fit: cover; }
+  .hidden { display: none !important; }
+  .hint-note { font-size: 11px; color: #aaa; line-height: 1.5; }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">🎨</div>
-  <h1>生圖工作室</h1>
-  <small>gpt-image-2</small>
-</header>
+<div class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5" fill="#fff" stroke="none"/><polyline points="21,15 16,10 5,21"/></svg>
+  </div>
+  <h1>gpt-image-2 生圖工具</h1>
+  <span>OpenAI API</span>
+</div>
 
-<div class="container">
-
-  <!-- API Key -->
-  <div class="api-section">
-    <label>OpenAI API Key</label>
-    <div class="api-row">
-      <input type="password" id="apiKey" placeholder="sk-proj-..." autocomplete="off">
-      <button class="btn-save" onclick="saveKey()">儲存</button>
+<div class="main">
+  <div class="sidebar">
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabGen" onclick="switchMode('gen')">✦ 生圖</button>
+      <button class="mode-tab" id="tabEdit" onclick="switchMode('edit')">✎ 改圖</button>
     </div>
-    <div class="api-status" id="apiStatus"></div>
-  </div>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab active" onclick="setMode('generate', this)">✨ 生圖</button>
-    <button class="tab" onclick="setMode('edit', this)">🖼️ 改圖</button>
-  </div>
+    <div class="sidebar-body">
 
-  <!-- Generate Form -->
-  <div id="form-generate">
-    <div class="card">
-      <div class="field">
-        <label>描述你想要的圖片</label>
-        <textarea id="gen-prompt" placeholder="例如：一隻穿西裝的龍蝦，水彩插畫風格，白色背景"></textarea>
-      </div>
-      <div class="options-row">
-        <div class="field" style="margin-bottom:0">
-          <label>尺寸</label>
-          <select id="gen-size">
-            <option value="1024x1024">1024×1024 方形</option>
-            <option value="1536x1024">1536×1024 橫式</option>
-            <option value="1024x1536">1024×1536 直式</option>
-          </select>
+      <div>
+        <div class="section-label">OpenAI API Key</div>
+        <div class="api-key-wrap">
+          <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" />
+          <button class="toggle-key" onclick="toggleKey()">👁</button>
         </div>
-        <div class="field" style="margin-bottom:0">
-          <label>品質</label>
-          <select id="gen-quality">
-            <option value="low">低（NT$0.3）</option>
-            <option value="medium">中（NT$1.3）</option>
-            <option value="high">高（NT$5.5）</option>
-          </select>
+        <div class="key-status" id="keyStatus"></div>
+      </div>
+
+      <div>
+        <div class="section-label" id="promptLabel">圖片描述</div>
+        <textarea id="prompt" placeholder="畫一隻穿西裝的龍蝦，扁平插畫風格..."></textarea>
+      </div>
+
+      <!-- 改圖：來源圖 -->
+      <div id="srcSection" class="hidden">
+        <div class="section-label">來源圖片 <span style="color:#e55;font-weight:400">必填</span></div>
+        <div class="upload-zone" id="srcZone">
+          <input type="file" id="srcFile" accept="image/png,image/jpeg,image/webp" onchange="handleFile('src',this)">
+          <button class="upload-clear" onclick="clearFile(event,'src')">✕ 清除</button>
+          <div class="upload-icon">🖼</div>
+          <div class="upload-text" id="srcText">點擊上傳 PNG / JPEG / WebP</div>
+          <img class="upload-preview" id="srcPreview" />
+        </div>
+        <p class="hint-note" style="margin-top:5px;">若非 PNG，工具會自動轉換。</p>
+      </div>
+
+      <!-- 改圖：遮罩 -->
+      <div id="maskSection" class="hidden">
+        <div class="section-label">遮罩圖片 <span style="color:#aaa;font-weight:400">選填</span></div>
+        <div class="upload-zone" id="maskZone">
+          <input type="file" id="maskFile" accept="image/png" onchange="handleFile('mask',this)">
+          <button class="upload-clear" onclick="clearFile(event,'mask')">✕ 清除</button>
+          <div class="upload-icon">⬜</div>
+          <div class="upload-text" id="maskText">黑色保留 / 白色替換（PNG）</div>
+          <img class="upload-preview" id="maskPreview" />
+        </div>
+        <p class="hint-note" style="margin-top:5px;">不上傳遮罩時，對整張圖進行改圖。</p>
+      </div>
+
+      <div>
+        <div class="section-label">選項</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>尺寸</label>
+            <select id="size">
+              <option value="1024x1024">1024×1024（方）</option>
+              <option value="1536x1024">1536×1024（橫）</option>
+              <option value="1024x1536">1024×1536（直）</option>
+            </select>
+          </div>
+          <div class="opt-group">
+            <label>品質</label>
+            <select id="quality" onchange="updateCost()">
+              <option value="low">low（NT$0.3）</option>
+              <option value="medium">medium（NT$1.3）</option>
+              <option value="high">high（NT$5.5）</option>
+            </select>
+          </div>
+          <div class="opt-group" id="countGroup">
+            <label>張數</label>
+            <select id="count" onchange="updateCost()">
+              <option value="1">1 張</option>
+              <option value="2">2 張</option>
+              <option value="4">4 張</option>
+            </select>
+          </div>
+          <div class="opt-group">
+            <label>格式</label>
+            <select id="format">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </div>
         </div>
       </div>
+
+      <div class="cost-hint" id="costHint">預估費用：<strong>~NT$0.3</strong>（1 張 × low）</div>
+
+      <button class="gen-btn" id="genBtn" onclick="run()">
+        <div class="spinner" id="spinner"></div>
+        <span id="genText">生成圖片</span>
+      </button>
+      <div class="progress-bar" id="progressBar"><div class="progress-fill"></div></div>
+
     </div>
   </div>
 
-  <!-- Edit Form -->
-  <div id="form-edit" style="display:none">
-    <div class="card">
-      <div class="field">
-        <label>上傳原始圖片</label>
-        <div class="upload-area" id="uploadArea">
-          <input type="file" id="editFile" accept="image/*" onchange="previewImage(this)">
-          <div class="icon">📁</div>
-          <p>點擊或拖曳圖片到這裡</p>
-          <img class="preview" id="previewImg">
-        </div>
-      </div>
-      <div class="field">
-        <label>描述要如何修改</label>
-        <textarea id="edit-prompt" placeholder="例如：把背景換成星空，保留主角造型"></textarea>
-      </div>
-      <div style="font-size:12px; color:var(--text2); background:var(--surface2); border-radius:8px; padding:10px 12px; margin-top:-8px;">
-        ℹ️ 改圖使用 <b style="color:var(--accent2)">dall-e-2</b>，輸出固定 1024×1024，JPG/PNG 皆可上傳
-      </div>
+  <div class="canvas-area">
+    <div class="results-header" id="resultsHeader" style="display:none;">
+      <h2>生成結果</h2>
+      <button class="clear-btn" onclick="clearHistory()">清除全部</button>
     </div>
-  </div>
-
-  <div class="cost-info">
-    💡 預設低品質，每張約 NT$0.3，可在品質選單升級
-  </div>
-
-  <div class="error-box" id="errorBox"></div>
-
-  <button class="btn-gen" id="btnGen" onclick="runGenerate()">
-    <span>🚀</span> 開始生圖
-  </button>
-
-  <!-- Progress -->
-  <div class="progress" id="progressBox">
-    <div class="spinner"></div>
-    <div class="timer" id="timerDisplay">0s</div>
-    <p>圖片生成中，請稍候…</p>
-  </div>
-
-  <!-- Result -->
-  <div class="result" id="resultBox">
-    <img id="resultImg" src="" alt="生成結果">
-    <div class="result-actions">
-      <a class="btn-dl primary" id="btnDownload" download="generated.png">⬇️ 下載</a>
-      <button class="btn-dl" onclick="useAsBase()">🖼️ 用來改圖</button>
+    <div class="error-bar" id="errorBar"></div>
+    <div id="emptyState" class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      <p>輸入 API Key 與描述，按下生成</p>
     </div>
+    <div class="results-grid" id="resultsGrid"></div>
   </div>
-
-  <!-- History -->
-  <div class="history" id="historySection" style="display:none">
-    <h2>📂 本次紀錄</h2>
-    <div class="history-grid" id="historyGrid"></div>
-  </div>
-
 </div>
 
 <script>
-let mode = 'generate';
-let timerInterval = null;
-let historyItems = [];
-let lastResultUrl = null;
+const COST = { low: 0.3, medium: 1.3, high: 5.5 };
+let currentMode = 'gen';
+let files = { src: null, mask: null }; // { base64, mimeType }
 
-// Load saved key
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('oai_key');
-  if (saved) {
-    document.getElementById('apiKey').value = saved;
-    document.getElementById('apiStatus').textContent = '✓ 已載入儲存的 Key';
-    document.getElementById('apiStatus').className = 'api-status ok';
+/* ── Mode ── */
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('tabGen').classList.toggle('active', mode === 'gen');
+  document.getElementById('tabEdit').classList.toggle('active', mode === 'edit');
+  document.getElementById('srcSection').classList.toggle('hidden', mode !== 'edit');
+  document.getElementById('maskSection').classList.toggle('hidden', mode !== 'edit');
+  document.getElementById('promptLabel').textContent = mode === 'edit' ? '改圖指令' : '圖片描述';
+  document.getElementById('prompt').placeholder = mode === 'edit'
+    ? '把背景換成海底世界，保留前景主體...' : '畫一隻穿西裝的龍蝦，扁平插畫風格...';
+  document.getElementById('genText').textContent = mode === 'edit' ? '開始改圖' : '生成圖片';
+  const cg = document.getElementById('countGroup');
+  if (mode === 'edit') {
+    cg.classList.add('disabled');
+    document.getElementById('count').value = '1';
+  } else {
+    cg.classList.remove('disabled');
   }
-});
-
-function saveKey() {
-  const key = document.getElementById('apiKey').value.trim();
-  if (!key.startsWith('sk-')) {
-    showError('API Key 格式不對，應以 sk- 開頭');
-    return;
-  }
-  localStorage.setItem('oai_key', key);
-  document.getElementById('apiStatus').textContent = '✓ 已儲存到本機';
-  document.getElementById('apiStatus').className = 'api-status ok';
+  updateCost();
 }
 
-function setMode(m, el) {
-  mode = m;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('form-generate').style.display = m === 'generate' ? 'block' : 'none';
-  document.getElementById('form-edit').style.display = m === 'edit' ? 'block' : 'none';
-  document.getElementById('btnGen').innerHTML = m === 'generate' ? '<span>🚀</span> 開始生圖' : '<span>✏️</span> 開始改圖';
-}
-
-function previewImage(input) {
+/* ── File upload ── */
+function handleFile(type, input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = e => {
-    const img = document.getElementById('previewImg');
-    img.src = e.target.result;
-    img.style.display = 'block';
-    document.querySelector('.upload-area .icon').style.display = 'none';
-    document.querySelector('.upload-area p').style.display = 'none';
+    const b64 = e.target.result.split(',')[1];
+    files[type] = { base64: b64, mimeType: file.type };
+    const zone = document.getElementById(type + 'Zone');
+    zone.classList.add('has-file');
+    document.getElementById(type + 'Text').textContent = file.name;
+    const prev = document.getElementById(type + 'Preview');
+    prev.src = e.target.result; prev.style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
 
+function clearFile(e, type) {
+  e.stopPropagation();
+  files[type] = null;
+  document.getElementById(type + 'File').value = '';
+  const zone = document.getElementById(type + 'Zone');
+  zone.classList.remove('has-file');
+  document.getElementById(type + 'Text').textContent = type === 'src'
+    ? '點擊上傳 PNG / JPEG / WebP' : '黑色保留 / 白色替換（PNG）';
+  const prev = document.getElementById(type + 'Preview');
+  prev.src = ''; prev.style.display = 'none';
+}
+
+/* ── API Key ── */
+function toggleKey() {
+  const inp = document.getElementById('apiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+document.getElementById('apiKey').addEventListener('input', function() {
+  const st = document.getElementById('keyStatus');
+  const v = this.value.trim();
+  if (!v) { st.textContent = ''; return; }
+  st.textContent = (v.startsWith('sk-') && v.length > 20) ? '格式看起來正確' : '應為 sk-... 開頭';
+  st.className = 'key-status ' + ((v.startsWith('sk-') && v.length > 20) ? 'ok' : 'err');
+  localStorage.setItem('oai_key', v);
+});
+
+/* ── Cost ── */
+function updateCost() {
+  const q = document.getElementById('quality').value;
+  const n = currentMode === 'edit' ? 1 : parseInt(document.getElementById('count').value);
+  document.getElementById('costHint').innerHTML =
+    `預估費用：<strong>~NT$${(COST[q] * n).toFixed(1)}</strong>（${n} 張 × ${q}）`;
+}
+document.getElementById('count').addEventListener('change', updateCost);
+document.getElementById('quality').addEventListener('change', updateCost);
+
+/* ── Init ── */
+window.onload = () => {
+  const saved = localStorage.getItem('oai_key');
+  if (saved) {
+    document.getElementById('apiKey').value = saved;
+    document.getElementById('keyStatus').textContent = '已載入上次的 Key';
+    document.getElementById('keyStatus').className = 'key-status ok';
+  }
+};
+
 function showError(msg) {
-  const box = document.getElementById('errorBox');
-  box.textContent = '⚠️ ' + msg;
-  box.style.display = 'block';
-  setTimeout(() => box.style.display = 'none', 6000);
+  const bar = document.getElementById('errorBar');
+  bar.textContent = msg; bar.classList.add('show');
+  setTimeout(() => bar.classList.remove('show'), 10000);
 }
 
-function startTimer() {
-  let sec = 0;
-  document.getElementById('timerDisplay').textContent = '0s';
-  timerInterval = setInterval(() => {
-    sec++;
-    document.getElementById('timerDisplay').textContent = sec + 's';
-  }, 1000);
+function setLoading(on) {
+  document.getElementById('genBtn').disabled = on;
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('genText').textContent = on
+    ? (currentMode === 'edit' ? '改圖中...' : '生成中...')
+    : (currentMode === 'edit' ? '開始改圖' : '生成圖片');
+  const pb = document.getElementById('progressBar');
+  if (on) { pb.classList.add('show'); pb.innerHTML = '<div class="progress-fill"></div>'; }
+  else pb.classList.remove('show');
 }
 
-function stopTimer() {
-  clearInterval(timerInterval);
+function b64toBlob(b64, mime) {
+  const bytes = atob(b64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
 }
 
-async function fileToBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
-}
-
-async function convertToPng(file) {
-  return new Promise((resolve) => {
+function convertToPng(b64, mime) {
+  return new Promise((resolve, reject) => {
     const img = new Image();
-    const url = URL.createObjectURL(file);
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      canvas.toBlob(blob => {
-        URL.revokeObjectURL(url);
-        resolve(blob);
-      }, 'image/png');
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      c.toBlob(blob => blob ? resolve(blob) : reject(new Error('PNG 轉換失敗')), 'image/png');
     };
-    img.src = url;
+    img.onerror = () => reject(new Error('無法讀取來源圖片'));
+    img.src = `data:${mime};base64,${b64}`;
   });
 }
 
-async function runGenerate() {
-  const key = localStorage.getItem('oai_key') || document.getElementById('apiKey').value.trim();
-  if (!key) { showError('請先輸入並儲存 OpenAI API Key'); return; }
+/* ── Run ── */
+async function run() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!apiKey) { showError('請先填入 OpenAI API Key'); return; }
+  if (!prompt) { showError('請填入描述 / 指令'); return; }
+  if (currentMode === 'edit' && !files.src) { showError('改圖模式需要上傳來源圖片'); return; }
 
-  document.getElementById('errorBox').style.display = 'none';
-  document.getElementById('resultBox').style.display = 'none';
+  const size = document.getElementById('size').value;
+  const quality = document.getElementById('quality').value;
+  const n = currentMode === 'edit' ? 1 : parseInt(document.getElementById('count').value);
+  const format = document.getElementById('format').value;
 
-  let prompt, size, quality;
-
-  if (mode === 'generate') {
-    prompt = document.getElementById('gen-prompt').value.trim();
-    size = document.getElementById('gen-size').value;
-    quality = document.getElementById('gen-quality').value;
-    if (!prompt) { showError('請輸入圖片描述'); return; }
-  } else {
-    prompt = document.getElementById('edit-prompt').value.trim();
-    size = '1024x1024'; // dall-e-2 固定尺寸
-    quality = 'low';    // dall-e-2 不需要 quality
-    const file = document.getElementById('editFile').files[0];
-    if (!file) { showError('請先上傳要修改的圖片'); return; }
-    if (!prompt) { showError('請輸入修改描述'); return; }
-  }
-
-  // Show progress
-  document.getElementById('btnGen').disabled = true;
-  document.getElementById('progressBox').style.display = 'block';
-  startTimer();
-
+  setLoading(true);
   try {
-    let responseData;
-
-    if (mode === 'generate') {
-      const res = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + key
-        },
-        body: JSON.stringify({
-          model: 'gpt-image-2',
-          prompt,
-          size,
-          quality,
-          n: 1,
-          response_format: 'b64_json'
-        })
-      });
-      responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error?.message || '生圖失敗');
-
-    } else {
-      // Edit mode - OpenAI edits API 目前只支援 dall-e-2，size 固定 1024x1024
-      const file = document.getElementById('editFile').files[0];
-      // 需要確保圖片是 PNG 格式
-      const formData = new FormData();
-      formData.append('model', 'dall-e-2');
-      // 自動把任何格式轉成 PNG（canvas 轉換）
-      const pngBlob = await convertToPng(file);
-      formData.append('image', pngBlob, 'image.png');
-      formData.append('prompt', prompt);
-      formData.append('size', '1024x1024');
-      formData.append('n', '1');
-      formData.append('response_format', 'b64_json');
-
-      const res = await fetch('https://api.openai.com/v1/images/edits', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + key },
-        body: formData
-      });
-      responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error?.message || '改圖失敗');
-    }
-
-    const b64 = responseData.data[0].b64_json;
-    const dataUrl = 'data:image/png;base64,' + b64;
-    lastResultUrl = dataUrl;
-
-    // Show result
-    document.getElementById('resultImg').src = dataUrl;
-    document.getElementById('btnDownload').href = dataUrl;
-    document.getElementById('btnDownload').download = `image_${Date.now()}.png`;
-    document.getElementById('resultBox').style.display = 'block';
-
-    // Add to history
-    addToHistory(dataUrl);
-
-  } catch (err) {
-    showError(err.message);
+    const data = currentMode === 'gen'
+      ? await apiGenerate(apiKey, prompt, size, quality, n, format)
+      : await apiEdit(apiKey, prompt, size, quality, format);
+    renderResults(data, prompt, size, quality, format);
+  } catch(e) {
+    showError(e.message);
   } finally {
-    stopTimer();
-    document.getElementById('progressBox').style.display = 'none';
-    document.getElementById('btnGen').disabled = false;
+    setLoading(false);
   }
 }
 
-function addToHistory(dataUrl) {
-  historyItems.unshift(dataUrl);
-  const grid = document.getElementById('historyGrid');
-  const section = document.getElementById('historySection');
-  section.style.display = 'block';
-
-  const item = document.createElement('div');
-  item.className = 'history-item';
-  const img = document.createElement('img');
-  img.src = dataUrl;
-  img.onclick = () => {
-    document.getElementById('resultImg').src = dataUrl;
-    document.getElementById('btnDownload').href = dataUrl;
-    document.getElementById('resultBox').style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  item.appendChild(img);
-  grid.prepend(item);
+async function apiGenerate(apiKey, prompt, size, quality, n, format) {
+  const res = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: 'gpt-image-2', prompt, size, quality, n,
+      output_format: format, response_format: 'b64_json' })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || `API 錯誤 ${res.status}`);
+  return data;
 }
 
-function useAsBase() {
-  if (!lastResultUrl) return;
-  setMode('edit', document.querySelectorAll('.tab')[1]);
-  // Convert dataUrl to file and set preview
-  fetch(lastResultUrl)
-    .then(r => r.blob())
-    .then(blob => {
-      const file = new File([blob], 'result.png', { type: 'image/png' });
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      document.getElementById('editFile').files = dt.files;
-      const img = document.getElementById('previewImg');
-      img.src = lastResultUrl;
-      img.style.display = 'block';
-      document.querySelector('.upload-area .icon').style.display = 'none';
-      document.querySelector('.upload-area p').style.display = 'none';
-    });
+async function apiEdit(apiKey, prompt, size, quality, format) {
+  const fd = new FormData();
+  fd.append('model', 'gpt-image-2');
+  fd.append('prompt', prompt);
+  fd.append('size', size);
+  fd.append('quality', quality);
+  fd.append('n', '1');
+  fd.append('response_format', 'b64_json');
+
+  // 來源圖轉 PNG（API 要求）
+  const srcBlob = files.src.mimeType === 'image/png'
+    ? b64toBlob(files.src.base64, 'image/png')
+    : await convertToPng(files.src.base64, files.src.mimeType);
+  fd.append('image', srcBlob, 'source.png');
+
+  if (files.mask) {
+    fd.append('mask', b64toBlob(files.mask.base64, 'image/png'), 'mask.png');
+  }
+
+  const res = await fetch('https://api.openai.com/v1/images/edits', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+    body: fd
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || `API 錯誤 ${res.status}`);
+  return data;
 }
+
+/* ── Render ── */
+function renderResults(data, prompt, size, quality, format) {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsHeader').style.display = 'flex';
+  const grid = document.getElementById('resultsGrid');
+  const ts = new Date().toLocaleTimeString('zh-TW');
+  const mimeMap = { jpeg: 'image/jpeg', webp: 'image/webp', png: 'image/png' };
+  const mime = mimeMap[format] || 'image/png';
+  const badgeHtml = currentMode === 'edit'
+    ? '<span class="badge badge-edit">改圖</span>'
+    : '<span class="badge badge-gen">生圖</span>';
+
+  data.data.forEach((item, i) => {
+    const src = `data:${mime};base64,${item.b64_json}`;
+    const filename = `gpt-image-${currentMode}-${Date.now()}-${i+1}.${format}`;
+
+    const card = document.createElement('div');
+    card.className = 'img-card';
+    card.innerHTML = `
+      <img src="${src}" alt="generated" loading="lazy" />
+      <div class="img-card-footer">
+        <div class="img-meta">${badgeHtml}${ts} · ${quality} · ${size.replace('x','×')}</div>
+        <div class="img-actions">
+          <a class="img-btn" href="${src}" download="${filename}">下載</a>
+          <button class="img-btn edit-trigger">送改圖</button>
+        </div>
+      </div>`;
+    card.querySelector('.edit-trigger').addEventListener('click', () => loadForEdit(src));
+    grid.insertBefore(card, grid.firstChild);
+  });
+}
+
+/* ── Send result to edit tab ── */
+function loadForEdit(dataSrc) {
+  const [header, b64] = dataSrc.split(',');
+  const mime = header.match(/data:([^;]+)/)[1];
+  files.src = { base64: b64, mimeType: mime };
+  switchMode('edit');
+  document.getElementById('srcZone').classList.add('has-file');
+  document.getElementById('srcText').textContent = '已載入生成結果';
+  const prev = document.getElementById('srcPreview');
+  prev.src = dataSrc; prev.style.display = 'block';
+}
+
+function clearHistory() {
+  document.getElementById('resultsGrid').innerHTML = '';
+  document.getElementById('emptyState').style.display = 'flex';
+  document.getElementById('resultsHeader').style.display = 'none';
+}
+
+document.getElementById('prompt').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) run();
+});
 </script>
 </body>
 </html>
