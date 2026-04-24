@@ -605,14 +605,13 @@ async function runGenerate() {
       if (!res.ok) throw new Error(responseData.error?.message || '生圖失敗');
 
     } else {
-      // Edit mode
+      // Edit mode - quality 參數不支援，只傳 model/image/prompt/size/n
       const file = document.getElementById('editFile').files[0];
       const formData = new FormData();
       formData.append('model', 'gpt-image-2');
       formData.append('image[]', file, file.name);
       formData.append('prompt', prompt);
       formData.append('size', size);
-      formData.append('quality', quality);
       formData.append('n', '1');
       formData.append('response_format', 'b64_json');
 
