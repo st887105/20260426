@@ -573,8 +573,8 @@ async function runGenerate() {
     if (!prompt) { showError('請輸入圖片描述'); return; }
   } else {
     prompt = document.getElementById('edit-prompt').value.trim();
-    size = document.getElementById('edit-size').value;
-    quality = document.getElementById('edit-quality').value;
+    size = '1024x1024'; // dall-e-2 固定尺寸
+    quality = 'low';    // dall-e-2 不需要 quality
     const file = document.getElementById('editFile').files[0];
     if (!file) { showError('請先上傳要修改的圖片'); return; }
     if (!prompt) { showError('請輸入修改描述'); return; }
