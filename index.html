@@ -49,6 +49,7 @@
 
   .ibox { font-size: 11px; padding: 7px 10px; border-radius: 6px; line-height: 1.6; }
   .ibox.info { background: #eaf2fb; border: 1px solid #b8d4f0; color: #185fa5; }
+  .ibox.warn { background: #fef9e7; border: 1px solid #f9e07a; color: #7d6608; }
 
   .costbox { font-size: 11px; color: var(--mu); background: var(--bg); padding: 7px 9px; border-radius: 6px; line-height: 1.6; }
   .costbox strong { color: var(--tx); }
@@ -58,7 +59,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .pb { height: 3px; background: #eee; border-radius: 2px; overflow: hidden; margin-top: 6px; display: none; }
   .pb.on { display: block; }
-  .pf { height: 100%; background: var(--tx); border-radius: 2px; animation: pg 20s ease-out forwards; }
+  .pf { height: 100%; background: var(--tx); border-radius: 2px; animation: pg 30s ease-out forwards; }
   @keyframes pg { from { width: 0; } to { width: 88%; } }
 
   .cv { flex: 1; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -79,7 +80,9 @@
   .cb:hover { background: var(--bg); }
   .cb.bl { border-color: #b8d4f0; color: var(--bl); } .cb.bl:hover { background: #eaf2fb; }
   .bg { display: inline-block; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 700; margin-right: 3px; }
-  .bg-g { background: #eaf3de; color: #3b6d11; } .bg-e { background: #e6f1fb; color: var(--bl); }
+  .bg-g { background: #eaf3de; color: #3b6d11; }
+  .bg-e { background: #e6f1fb; color: var(--bl); }
+  .bg-r { background: #fde8e8; color: var(--rd); }
   .eb { background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; padding: 9px 12px; font-size: 12px; color: var(--rd); margin-bottom: 12px; display: none; line-height: 1.6; white-space: pre-line; }
   .eb.on { display: block; }
   .ov { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 90; }
@@ -147,14 +150,15 @@
           <input type="file" id="mf" accept="image/png" onchange="hf('m',this)">
           <button class="ucl" onclick="cf(event,'m')">✕ 清除</button>
           <div class="ui">⬜</div>
-          <div class="ut" id="mt">含透明通道的 PNG（alpha=0 區域會被改）</div>
+          <div class="ut" id="mt">含透明通道的 PNG（alpha=0 被改）</div>
           <img class="up" id="mp">
         </div>
       </div>
 
+      <!-- 改圖端點說明 -->
       <div id="editInfo" class="ibox info hidden">
-        <strong>改圖端點：/v1/images/edits + gpt-image-2</strong><br>
-        圖片自動轉 PNG 並壓縮至 4MB 以下。
+        <strong>改圖：Responses API + gpt-image-2</strong><br>
+        圖片自動壓縮至 4MB 以下。
       </div>
 
       <div>
@@ -168,7 +172,7 @@
               <option value="1024x1536">1024×1536（直）</option>
             </select>
           </div>
-          <div class="op" id="qo">
+          <div class="op">
             <label>品質</label>
             <select id="ql" onchange="uc()">
               <option value="low">low（NT$0.3）</option>
@@ -184,7 +188,7 @@
               <option value="4">4 張</option>
             </select>
           </div>
-          <div class="op">
+          <div class="op" id="fmtGrp">
             <label>格式（生圖）</label>
             <select id="ft">
               <option value="png">PNG</option>
@@ -234,35 +238,46 @@ function sw(m) {
   document.getElementById('pl').textContent = m==='edit' ? '改圖指令' : '圖片描述';
   document.getElementById('pt').placeholder = m==='edit' ? '把背景換成海底世界，保留前景主體...' : '畫一隻穿西裝的龍蝦，扁平插畫風格...';
   document.getElementById('rt').textContent = m==='edit' ? '開始改圖' : '生成圖片';
+  // 改圖：張數鎖 1，格式固定 PNG（Responses API 回傳）
   const co = document.getElementById('co');
-  if (m==='edit') { co.classList.add('dim'); document.getElementById('ct').value='1'; }
-  else co.classList.remove('dim');
+  const fg = document.getElementById('fmtGrp');
+  if (m==='edit') { co.classList.add('dim'); document.getElementById('ct').value='1'; fg.classList.add('dim'); }
+  else { co.classList.remove('dim'); fg.classList.remove('dim'); }
   uc();
 }
 
-/* 壓縮圖片至 PNG < maxBytes */
+/* ── 壓縮圖片 PNG < 4MB ── */
 async function compressToPng(b64, mime, maxBytes=3.8*1024*1024) {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => {
-      const tryScale = (scale) => {
+      const tryScale = (s) => {
         const c = document.createElement('canvas');
-        c.width = Math.round(img.width*scale);
-        c.height = Math.round(img.height*scale);
+        c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
         c.toBlob(blob => {
-          if (!blob) { rej(new Error('圖片轉換失敗')); return; }
-          if (blob.size <= maxBytes || scale <= 0.1) {
+          if (!blob) { rej(new Error('PNG 轉換失敗')); return; }
+          if (blob.size <= maxBytes || s <= 0.1) {
             const h = document.getElementById('sizeHint');
-            if (h) h.textContent = `${c.width}×${c.height}px，${(blob.size/1024).toFixed(0)}KB${scale<1?' (已壓縮)':''}`;
+            if (h) h.textContent = `${c.width}×${c.height}px, ${(blob.size/1024).toFixed(0)}KB${s<1?' (已壓縮)':''}`;
             res(blob);
-          } else { tryScale(scale*0.8); }
+          } else tryScale(s*0.8);
         }, 'image/png');
       };
       tryScale(1.0);
     };
     img.onerror = () => rej(new Error('無法讀取圖片'));
     img.src = `data:${mime};base64,${b64}`;
+  });
+}
+
+/* blob → base64 string */
+function blobToB64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
   });
 }
 
@@ -274,40 +289,37 @@ function hf(type, input) {
     const id = type==='s' ? 'sz' : 'mz';
     document.getElementById(id).classList.add('has');
     document.getElementById(type+'t').textContent = file.name.length>26 ? file.name.slice(0,24)+'…' : file.name;
-    const p = document.getElementById(type==='s' ? 'sp2' : 'mp');
-    p.src = e.target.result; p.style.display='block';
+    const p = document.getElementById(type==='s' ? 'sp2' : 'mp'); p.src=e.target.result; p.style.display='block';
     if (type==='s') {
       const h = document.getElementById('sizeHint');
-      if (h) h.textContent = file.size > 3.8*1024*1024 ? `⚠️ ${(file.size/1024).toFixed(0)}KB，將自動壓縮` : `${(file.size/1024).toFixed(0)}KB`;
+      if (h) h.textContent = file.size>3.8*1024*1024 ? `⚠️ ${(file.size/1024).toFixed(0)}KB，將自動壓縮` : `${(file.size/1024).toFixed(0)}KB`;
     }
   };
   r.readAsDataURL(file);
 }
 function cf(e, type) {
-  e.stopPropagation();
-  files[type]=null;
+  e.stopPropagation(); files[type]=null;
   document.getElementById(type==='s'?'sf':'mf').value='';
   document.getElementById(type==='s'?'sz':'mz').classList.remove('has');
-  document.getElementById(type+'t').textContent = type==='s' ? '點擊上傳 PNG / JPEG / WebP' : '含透明通道的 PNG（alpha=0 區域會被改）';
+  document.getElementById(type+'t').textContent = type==='s' ? '點擊上傳 PNG / JPEG / WebP' : '含透明通道的 PNG（alpha=0 被改）';
   const p=document.getElementById(type==='s'?'sp2':'mp'); p.src=''; p.style.display='none';
   if (type==='s') { const h=document.getElementById('sizeHint'); if(h) h.textContent='自動壓縮至 4MB 以下。'; }
 }
 
 function toggleEye() { const i=document.getElementById('ak'); i.type=i.type==='password'?'text':'password'; }
 document.getElementById('ak').addEventListener('input', function() {
-  const v=this.value.trim(), el=document.getElementById('ks');
-  if (!v) { el.textContent=''; return; }
+  const v=this.value.trim(), el=document.getElementById('ks'); if(!v){el.textContent='';return;}
   const ok=v.startsWith('sk-')&&v.length>20;
   el.textContent=ok?'格式看起來正確':'應為 sk-... 開頭'; el.className='ks '+(ok?'ok':'err');
-  localStorage.setItem('oai_key', v);
+  localStorage.setItem('oai_key',v);
 });
 
 function uc() {
   const q=document.getElementById('ql').value, n=mode==='edit'?1:parseInt(document.getElementById('ct').value);
   document.getElementById('cb2').innerHTML=`預估費用：<strong>~NT$${(COST[q]*n).toFixed(1)}</strong>（${n} 張 × ${q}）`;
 }
-document.getElementById('ct').addEventListener('change', uc);
-document.getElementById('ql').addEventListener('change', uc);
+document.getElementById('ct').addEventListener('change',uc);
+document.getElementById('ql').addEventListener('change',uc);
 window.onload=()=>{ const s=localStorage.getItem('oai_key'); if(s){ document.getElementById('ak').value=s; document.getElementById('ks').textContent='已載入上次的 Key'; document.getElementById('ks').className='ks ok'; } };
 
 function showErr(msg) { const b=document.getElementById('eb'); b.textContent=msg; b.classList.add('on'); setTimeout(()=>b.classList.remove('on'),15000); }
@@ -319,34 +331,32 @@ function setLoad(on) {
   if(on){pb.classList.add('on');pb.innerHTML='<div class="pf"></div>';}else pb.classList.remove('on');
 }
 
-function b64Blob(b64,mime){const bytes=atob(b64),arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime});}
-
 async function run() {
   const ak=document.getElementById('ak').value.trim();
   const pt=document.getElementById('pt').value.trim();
   if(!ak){showErr('請先填入 OpenAI API Key');return;}
   if(!pt){showErr('請填入描述 / 指令');return;}
   if(mode==='edit'&&!files.s){showErr('改圖模式需要上傳來源圖片');return;}
-
   const size=document.getElementById('sz2').value;
   const quality=document.getElementById('ql').value;
   const n=mode==='edit'?1:parseInt(document.getElementById('ct').value);
   const format=document.getElementById('ft').value;
-
   setLoad(true); closeMenu();
   try {
     if(mode==='gen'){
-      const data=await apiGen(ak,pt,size,quality,n,format);
-      render(data.data,pt,size,quality,format,'gen');
+      // ── 生圖：Image API，支援 output_format、quality、n ──
+      const d=await apiGen(ak,pt,size,quality,n,format);
+      render(d.data, pt, size, quality, format, 'gen');
     } else {
-      const data=await apiEdit(ak,pt,size,quality);
-      render(data,pt,size,quality,'png','edit'); // edits 永遠回傳 PNG
+      // ── 改圖：先試 gpt-image-2 edits，失敗再用 Responses API ──
+      const items=await apiEdit(ak, pt, size, quality);
+      render(items, pt, size, quality, 'png', 'edit');
     }
   } catch(e){ showErr(e.message); }
   finally { setLoad(false); }
 }
 
-/* ── 生圖：output_format 控制格式，response_format 不用 ── */
+/* ── 生圖 ── */
 async function apiGen(ak,pt,size,quality,n,format) {
   const res=await fetch('https://api.openai.com/v1/images/generations',{
     method:'POST',
@@ -354,61 +364,99 @@ async function apiGen(ak,pt,size,quality,n,format) {
     body:JSON.stringify({model:'gpt-image-2',prompt:pt,size,quality,n,output_format:format})
   });
   const d=await res.json();
-  if(!res.ok) throw new Error(d?.error?.message||`API 錯誤 ${res.status}`);
+  if(!res.ok) throw new Error(d?.error?.message||`生圖失敗 ${res.status}`);
   return d;
 }
 
-/* ── 改圖：gpt-image-2 edits ── 
-   關鍵：GPT image 模型不接受 response_format，永遠回傳 b64_json
-   也不接受 output_format（edits 端點限制）
-*/
-async function apiEdit(ak,pt,size,quality) {
-  // 壓縮轉 PNG
-  const srcBlob=await compressToPng(files.s.b64, files.s.mime);
-
-  const fd=new FormData();
+/* ── 改圖：主路線 gpt-image-2 edits，失敗 fallback Responses API ── */
+async function apiEdit(ak, pt, size, quality) {
+  const srcBlob = await compressToPng(files.s.b64, files.s.mime);
+  const fd = new FormData();
   fd.append('model','gpt-image-2');
-  fd.append('prompt',pt);
-  fd.append('size',size);
-  fd.append('quality',quality);  // gpt-image-2 edits 支援 quality
+  fd.append('prompt', pt);
+  fd.append('size', size);
+  fd.append('quality', quality);
   fd.append('n','1');
-  // ❌ 不加 response_format：GPT image 模型不支援此參數
-  // ❌ 不加 output_format：edits 端點不支援
-  fd.append('image',srcBlob,'source.png');
-  if(files.m){
-    const maskBlob=await compressToPng(files.m.b64,files.m.mime);
-    fd.append('mask',maskBlob,'mask.png');
+  // ⚠️ 不加 response_format（GPT image 模型不支援）
+  // ⚠️ 不加 output_format（edits 端點不支援）
+  fd.append('image', srcBlob, 'source.png');
+  if (files.m) {
+    const maskBlob = await compressToPng(files.m.b64, files.m.mime);
+    fd.append('mask', maskBlob, 'mask.png');
+  }
+  const res = await fetch('https://api.openai.com/v1/images/edits',{
+    method:'POST', headers:{'Authorization':`Bearer ${ak}`}, body:fd
+  });
+  const d = await res.json();
+  if (!res.ok) {
+    // gpt-image-2 edits 不可用（tier 不夠）→ 用 Responses API
+    console.warn('edits 失敗，改用 Responses API:', d?.error?.message);
+    return await apiEditResponses(ak, pt, size, quality, srcBlob);
+  }
+  return d.data;
+}
+
+/* ── 改圖 fallback：Responses API ──
+   關鍵：tools 裡的 image_generation 只放 type，
+   quality/size 改成在 prompt 文字裡指定（避免 Unknown parameter）
+*/
+async function apiEditResponses(ak, pt, size, quality, srcBlob) {
+  const b64 = await blobToB64(srcBlob);
+
+  // 把 size/quality 寫進指令，讓模型理解（Responses API tool 不接受這些參數）
+  const sizeLabel = {'1024x1024':'正方形 1024×1024','1536x1024':'橫向 1536×1024','1024x1536':'直向 1024×1536'}[size]||size;
+  const qualityLabel = {'low':'低品質(low)','medium':'中品質(medium)','high':'高品質(high)'}[quality]||quality;
+  const fullPrompt = `請使用 gpt-image-2 模型，以 ${qualityLabel}、${sizeLabel} 規格，對這張圖進行改圖：${pt}`;
+
+  const res = await fetch('https://api.openai.com/v1/responses',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${ak}`},
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      input: [{
+        role: 'user',
+        content: [
+          { type: 'input_image', image_url: `data:image/png;base64,${b64}` },
+          { type: 'input_text', text: fullPrompt }
+        ]
+      }],
+      // ⚠️ tool 只放 type，不放 quality/size/action 等額外參數
+      tools: [{ type: 'image_generation' }],
+      tool_choice: { type: 'image_generation' }
+    })
+  });
+  const d = await res.json();
+  if (!res.ok) {
+    throw new Error(`改圖失敗：${d?.error?.message||res.status}`);
   }
 
-  const res=await fetch('https://api.openai.com/v1/images/edits',{
-    method:'POST',
-    headers:{'Authorization':`Bearer ${ak}`},
-    body:fd
-  });
-  const d=await res.json();
-  if(!res.ok){
-    const msg=d?.error?.message||'';
-    throw new Error(
-      `改圖失敗：${msg||`HTTP ${res.status}`}\n\n` +
-      (msg.includes('dall-e-2')||msg.includes('model')
-        ? '此帳號的 gpt-image-2 edits 權限尚未開放（需要較高的 API tier）。'
-        : msg.includes('PNG')||msg.includes('4 MB')
-        ? '圖片轉換問題，請嘗試上傳更小的圖片。'
-        : '請確認 API Key 正確且帳號有足夠額度。')
-    );
+  // 從 output 撈 image_generation_call
+  const images = (d.output||[])
+    .filter(x => x.type==='image_generation_call' && x.result)
+    .map(x => ({ b64_json: x.result }));
+
+  if (images.length===0) {
+    // 嘗試從 content 撈（不同回傳格式）
+    const fromContent = (d.output||[])
+      .flatMap(x => x.content||[])
+      .filter(x => x.type==='image_generation_call' && x.result)
+      .map(x => ({ b64_json: x.result }));
+    if (fromContent.length>0) return fromContent;
+    throw new Error('改圖完成但未找到圖片輸出，請嘗試不同的描述或重試。');
   }
-  return d.data; // [{ b64_json }]
+  return images;
 }
 
 /* ── render ── */
-function render(items,pt,size,quality,format,m) {
+function render(items, pt, size, quality, format, m) {
   document.getElementById('es').style.display='none';
   document.getElementById('rh').style.display='flex';
   const grid=document.getElementById('grid');
   const ts=new Date().toLocaleTimeString('zh-TW');
   const mime={'jpeg':'image/jpeg','webp':'image/webp','png':'image/png'}[format]||'image/png';
-  const badge=m==='edit'?'<span class="bg bg-e">改圖</span>':'<span class="bg bg-g">生圖</span>';
+  const badge = m==='edit' ? '<span class="bg bg-e">改圖</span>' : '<span class="bg bg-g">生圖</span>';
   items.forEach((item,i)=>{
+    if (!item.b64_json) return;
     const src=`data:${mime};base64,${item.b64_json}`;
     const fname=`gpt-image-${m}-${Date.now()}-${i+1}.${format}`;
     const card=document.createElement('div');
@@ -421,8 +469,7 @@ function render(items,pt,size,quality,format,m) {
 
 function loadEdit(src) {
   const [hd,b64]=src.split(',');
-  const mime=hd.match(/data:([^;]+)/)[1];
-  files.s={b64,mime};
+  files.s={b64, mime:hd.match(/data:([^;]+)/)[1]};
   sw('edit');
   document.getElementById('sz').classList.add('has');
   document.getElementById('st').textContent='已載入生成結果';
@@ -436,7 +483,7 @@ function clrAll() {
   document.getElementById('rh').style.display='none';
 }
 
-document.getElementById('pt').addEventListener('keydown',e=>{
+document.getElementById('pt').addEventListener('keydown', e=>{
   if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)) run();
 });
 </script>
