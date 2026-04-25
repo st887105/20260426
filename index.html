@@ -47,10 +47,8 @@
   .uz.has .ucl { display: block; }
   .hint { font-size: 11px; color: var(--fa); line-height: 1.5; margin-top: 4px; }
 
-  /* 改圖狀態顯示 */
-  .edit-status { font-size: 11px; padding: 7px 10px; border-radius: 6px; line-height: 1.6; }
-  .edit-status.info { background: #eaf2fb; border: 1px solid #b8d4f0; color: #185fa5; }
-  .edit-status.warn { background: #fef9e7; border: 1px solid #f9e07a; color: #7d6608; }
+  .ibox { font-size: 11px; padding: 7px 10px; border-radius: 6px; line-height: 1.6; }
+  .ibox.info { background: #eaf2fb; border: 1px solid #b8d4f0; color: #185fa5; }
 
   .costbox { font-size: 11px; color: var(--mu); background: var(--bg); padding: 7px 9px; border-radius: 6px; line-height: 1.6; }
   .costbox strong { color: var(--tx); }
@@ -131,7 +129,6 @@
         <textarea id="pt" placeholder="畫一隻穿西裝的龍蝦，扁平插畫風格..."></textarea>
       </div>
 
-      <!-- 改圖：來源圖 -->
       <div id="ss" class="hidden">
         <div class="lbl">來源圖片 <span style="color:#e55;font-weight:400">必填</span></div>
         <div class="uz" id="sz">
@@ -143,22 +140,21 @@
         </div>
         <p class="hint" id="sizeHint">自動壓縮至 4MB 以下。</p>
       </div>
+
       <div id="ms" class="hidden">
         <div class="lbl">遮罩 <span style="color:#aaa;font-weight:400">選填</span></div>
         <div class="uz" id="mz">
           <input type="file" id="mf" accept="image/png" onchange="hf('m',this)">
           <button class="ucl" onclick="cf(event,'m')">✕ 清除</button>
           <div class="ui">⬜</div>
-          <div class="ut" id="mt">黑色保留 / 白色替換（PNG）</div>
+          <div class="ut" id="mt">含透明通道的 PNG（alpha=0 區域會被改）</div>
           <img class="up" id="mp">
         </div>
-        <p class="hint">需有 alpha 通道（透明遮罩）。</p>
       </div>
 
-      <!-- 改圖方式 -->
-      <div id="editInfo" class="edit-status info hidden">
-        <strong>改圖端點：gpt-image-2 edits</strong><br>
-        圖片會自動轉 PNG 並壓縮至 4MB 以下。
+      <div id="editInfo" class="ibox info hidden">
+        <strong>改圖端點：/v1/images/edits + gpt-image-2</strong><br>
+        圖片自動轉 PNG 並壓縮至 4MB 以下。
       </div>
 
       <div>
@@ -189,7 +185,7 @@
             </select>
           </div>
           <div class="op">
-            <label>格式</label>
+            <label>格式（生圖）</label>
             <select id="ft">
               <option value="png">PNG</option>
               <option value="jpeg">JPEG</option>
@@ -225,56 +221,45 @@
 <script>
 const COST = { low: 0.3, medium: 1.3, high: 5.5 };
 let mode = 'gen';
-let files = { s: null, m: null }; // { b64, mime, originalSize }
+let files = { s: null, m: null };
 
 function toggleMenu() { document.getElementById('sb').classList.toggle('open'); document.getElementById('ov').classList.toggle('on'); }
 function closeMenu() { document.getElementById('sb').classList.remove('open'); document.getElementById('ov').classList.remove('on'); }
 
 function sw(m) {
   mode = m;
-  document.getElementById('tG').classList.toggle('on', m === 'gen');
-  document.getElementById('tE').classList.toggle('on', m === 'edit');
-  ['ss','ms','editInfo'].forEach(id => document.getElementById(id).classList.toggle('hidden', m !== 'edit'));
-  document.getElementById('pl').textContent = m === 'edit' ? '改圖指令' : '圖片描述';
-  document.getElementById('pt').placeholder = m === 'edit' ? '把背景換成海底世界，保留前景主體...' : '畫一隻穿西裝的龍蝦，扁平插畫風格...';
-  document.getElementById('rt').textContent = m === 'edit' ? '開始改圖' : '生成圖片';
+  document.getElementById('tG').classList.toggle('on', m==='gen');
+  document.getElementById('tE').classList.toggle('on', m==='edit');
+  ['ss','ms','editInfo'].forEach(id => document.getElementById(id).classList.toggle('hidden', m!=='edit'));
+  document.getElementById('pl').textContent = m==='edit' ? '改圖指令' : '圖片描述';
+  document.getElementById('pt').placeholder = m==='edit' ? '把背景換成海底世界，保留前景主體...' : '畫一隻穿西裝的龍蝦，扁平插畫風格...';
+  document.getElementById('rt').textContent = m==='edit' ? '開始改圖' : '生成圖片';
   const co = document.getElementById('co');
-  if (m === 'edit') { co.classList.add('dim'); document.getElementById('ct').value = '1'; }
+  if (m==='edit') { co.classList.add('dim'); document.getElementById('ct').value='1'; }
   else co.classList.remove('dim');
   uc();
 }
 
-/* ── 圖片壓縮：確保 PNG < 4MB ── */
-async function compressToPng(b64, mime, maxBytes = 3.8 * 1024 * 1024) {
+/* 壓縮圖片至 PNG < maxBytes */
+async function compressToPng(b64, mime, maxBytes=3.8*1024*1024) {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => {
-      let w = img.width, h = img.height;
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      // 逐步縮小直到 < 4MB
-      const tryRender = (scale) => {
-        canvas.width = Math.round(w * scale);
-        canvas.height = Math.round(h * scale);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(blob => {
+      const tryScale = (scale) => {
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width*scale);
+        c.height = Math.round(img.height*scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(blob => {
           if (!blob) { rej(new Error('圖片轉換失敗')); return; }
           if (blob.size <= maxBytes || scale <= 0.1) {
-            // 更新 hint
-            const kb = (blob.size / 1024).toFixed(0);
-            const hint = document.getElementById('sizeHint');
-            if (hint) hint.textContent = scale < 1
-              ? `已壓縮：${canvas.width}×${canvas.height}px，${kb}KB`
-              : `${canvas.width}×${canvas.height}px，${kb}KB（無需壓縮）`;
+            const h = document.getElementById('sizeHint');
+            if (h) h.textContent = `${c.width}×${c.height}px，${(blob.size/1024).toFixed(0)}KB${scale<1?' (已壓縮)':''}`;
             res(blob);
-          } else {
-            tryRender(scale * 0.8);
-          }
+          } else { tryScale(scale*0.8); }
         }, 'image/png');
       };
-      tryRender(1.0);
+      tryScale(1.0);
     };
     img.onerror = () => rej(new Error('無法讀取圖片'));
     img.src = `data:${mime};base64,${b64}`;
@@ -285,230 +270,174 @@ function hf(type, input) {
   const file = input.files[0]; if (!file) return;
   const r = new FileReader();
   r.onload = e => {
-    const b64 = e.target.result.split(',')[1];
-    files[type] = { b64, mime: file.type, size: file.size };
-    const id = type === 's' ? 'sz' : 'mz';
+    files[type] = { b64: e.target.result.split(',')[1], mime: file.type };
+    const id = type==='s' ? 'sz' : 'mz';
     document.getElementById(id).classList.add('has');
-    document.getElementById(type + 't').textContent = file.name.length > 26 ? file.name.slice(0,24)+'…' : file.name;
-    const p = document.getElementById(type === 's' ? 'sp2' : 'mp');
-    p.src = e.target.result; p.style.display = 'block';
-    if (type === 's') {
-      const kb = (file.size / 1024).toFixed(0);
-      const hint = document.getElementById('sizeHint');
-      if (hint) hint.textContent = file.size > 3.8*1024*1024
-        ? `⚠️ ${kb}KB，將自動壓縮至 4MB 以下` : `${kb}KB（無需壓縮）`;
+    document.getElementById(type+'t').textContent = file.name.length>26 ? file.name.slice(0,24)+'…' : file.name;
+    const p = document.getElementById(type==='s' ? 'sp2' : 'mp');
+    p.src = e.target.result; p.style.display='block';
+    if (type==='s') {
+      const h = document.getElementById('sizeHint');
+      if (h) h.textContent = file.size > 3.8*1024*1024 ? `⚠️ ${(file.size/1024).toFixed(0)}KB，將自動壓縮` : `${(file.size/1024).toFixed(0)}KB`;
     }
   };
   r.readAsDataURL(file);
 }
 function cf(e, type) {
   e.stopPropagation();
-  files[type] = null;
-  document.getElementById(type === 's' ? 'sf' : 'mf').value = '';
-  document.getElementById(type === 's' ? 'sz' : 'mz').classList.remove('has');
-  document.getElementById(type + 't').textContent = type === 's' ? '點擊上傳 PNG / JPEG / WebP' : '黑色保留 / 白色替換（PNG）';
-  const p = document.getElementById(type === 's' ? 'sp2' : 'mp'); p.src = ''; p.style.display = 'none';
-  if (type === 's') { const h = document.getElementById('sizeHint'); if (h) h.textContent = '自動壓縮至 4MB 以下。'; }
+  files[type]=null;
+  document.getElementById(type==='s'?'sf':'mf').value='';
+  document.getElementById(type==='s'?'sz':'mz').classList.remove('has');
+  document.getElementById(type+'t').textContent = type==='s' ? '點擊上傳 PNG / JPEG / WebP' : '含透明通道的 PNG（alpha=0 區域會被改）';
+  const p=document.getElementById(type==='s'?'sp2':'mp'); p.src=''; p.style.display='none';
+  if (type==='s') { const h=document.getElementById('sizeHint'); if(h) h.textContent='自動壓縮至 4MB 以下。'; }
 }
 
-function toggleEye() { const i = document.getElementById('ak'); i.type = i.type === 'password' ? 'text' : 'password'; }
+function toggleEye() { const i=document.getElementById('ak'); i.type=i.type==='password'?'text':'password'; }
 document.getElementById('ak').addEventListener('input', function() {
-  const v = this.value.trim(), el = document.getElementById('ks');
-  if (!v) { el.textContent = ''; return; }
-  const ok = v.startsWith('sk-') && v.length > 20;
-  el.textContent = ok ? '格式看起來正確' : '應為 sk-... 開頭';
-  el.className = 'ks ' + (ok ? 'ok' : 'err');
+  const v=this.value.trim(), el=document.getElementById('ks');
+  if (!v) { el.textContent=''; return; }
+  const ok=v.startsWith('sk-')&&v.length>20;
+  el.textContent=ok?'格式看起來正確':'應為 sk-... 開頭'; el.className='ks '+(ok?'ok':'err');
   localStorage.setItem('oai_key', v);
 });
 
 function uc() {
-  const q = document.getElementById('ql').value, n = mode === 'edit' ? 1 : parseInt(document.getElementById('ct').value);
-  document.getElementById('cb2').innerHTML = `預估費用：<strong>~NT$${(COST[q]*(mode==='edit'?1:n)).toFixed(1)}</strong>（${mode==='edit'?'改圖 × ':''}${n} 張 × ${q}）`;
+  const q=document.getElementById('ql').value, n=mode==='edit'?1:parseInt(document.getElementById('ct').value);
+  document.getElementById('cb2').innerHTML=`預估費用：<strong>~NT$${(COST[q]*n).toFixed(1)}</strong>（${n} 張 × ${q}）`;
 }
 document.getElementById('ct').addEventListener('change', uc);
 document.getElementById('ql').addEventListener('change', uc);
-window.onload = () => { const s = localStorage.getItem('oai_key'); if (s) { document.getElementById('ak').value = s; document.getElementById('ks').textContent = '已載入上次的 Key'; document.getElementById('ks').className = 'ks ok'; } };
+window.onload=()=>{ const s=localStorage.getItem('oai_key'); if(s){ document.getElementById('ak').value=s; document.getElementById('ks').textContent='已載入上次的 Key'; document.getElementById('ks').className='ks ok'; } };
 
-function showErr(msg) {
-  const b = document.getElementById('eb'); b.textContent = msg; b.classList.add('on');
-  setTimeout(() => b.classList.remove('on'), 15000);
-}
+function showErr(msg) { const b=document.getElementById('eb'); b.textContent=msg; b.classList.add('on'); setTimeout(()=>b.classList.remove('on'),15000); }
 function setLoad(on) {
-  document.getElementById('rb').disabled = on;
-  document.getElementById('sp3').style.display = on ? 'block' : 'none';
-  document.getElementById('rt').textContent = on ? (mode === 'edit' ? '改圖中...' : '生成中...') : (mode === 'edit' ? '開始改圖' : '生成圖片');
-  const pb = document.getElementById('pb');
-  if (on) { pb.classList.add('on'); pb.innerHTML = '<div class="pf"></div>'; } else pb.classList.remove('on');
+  document.getElementById('rb').disabled=on;
+  document.getElementById('sp3').style.display=on?'block':'none';
+  document.getElementById('rt').textContent=on?(mode==='edit'?'改圖中...':'生成中...'):(mode==='edit'?'開始改圖':'生成圖片');
+  const pb=document.getElementById('pb');
+  if(on){pb.classList.add('on');pb.innerHTML='<div class="pf"></div>';}else pb.classList.remove('on');
 }
 
-function b64Blob(b64, mime) {
-  const bytes = atob(b64), arr = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-  return new Blob([arr], { type: mime });
-}
+function b64Blob(b64,mime){const bytes=atob(b64),arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime});}
 
 async function run() {
-  const ak = document.getElementById('ak').value.trim();
-  const pt = document.getElementById('pt').value.trim();
-  if (!ak) { showErr('請先填入 OpenAI API Key'); return; }
-  if (!pt) { showErr('請填入描述 / 指令'); return; }
-  if (mode === 'edit' && !files.s) { showErr('改圖模式需要上傳來源圖片'); return; }
+  const ak=document.getElementById('ak').value.trim();
+  const pt=document.getElementById('pt').value.trim();
+  if(!ak){showErr('請先填入 OpenAI API Key');return;}
+  if(!pt){showErr('請填入描述 / 指令');return;}
+  if(mode==='edit'&&!files.s){showErr('改圖模式需要上傳來源圖片');return;}
 
-  const size = document.getElementById('sz2').value;
-  const quality = document.getElementById('ql').value;
-  const n = mode === 'edit' ? 1 : parseInt(document.getElementById('ct').value);
-  const format = document.getElementById('ft').value;
+  const size=document.getElementById('sz2').value;
+  const quality=document.getElementById('ql').value;
+  const n=mode==='edit'?1:parseInt(document.getElementById('ct').value);
+  const format=document.getElementById('ft').value;
 
   setLoad(true); closeMenu();
   try {
-    if (mode === 'gen') {
-      const data = await apiGen(ak, pt, size, quality, n, format);
-      render(data.data, pt, size, quality, format, 'gen');
+    if(mode==='gen'){
+      const data=await apiGen(ak,pt,size,quality,n,format);
+      render(data.data,pt,size,quality,format,'gen');
     } else {
-      const data = await apiEdit(ak, pt, size, quality, format);
-      render(data, pt, size, quality, format, 'edit');
+      const data=await apiEdit(ak,pt,size,quality);
+      render(data,pt,size,quality,'png','edit'); // edits 永遠回傳 PNG
     }
-  } catch(e) { showErr(e.message); }
+  } catch(e){ showErr(e.message); }
   finally { setLoad(false); }
 }
 
-/* ── 生圖 ── */
-async function apiGen(ak, pt, size, quality, n, format) {
-  const res = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ak}` },
-    body: JSON.stringify({ model: 'gpt-image-2', prompt: pt, size, quality, n, output_format: format, response_format: 'b64_json' })
+/* ── 生圖：output_format 控制格式，response_format 不用 ── */
+async function apiGen(ak,pt,size,quality,n,format) {
+  const res=await fetch('https://api.openai.com/v1/images/generations',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${ak}`},
+    body:JSON.stringify({model:'gpt-image-2',prompt:pt,size,quality,n,output_format:format})
   });
-  const d = await res.json();
-  if (!res.ok) throw new Error(d?.error?.message || `API 錯誤 ${res.status}`);
+  const d=await res.json();
+  if(!res.ok) throw new Error(d?.error?.message||`API 錯誤 ${res.status}`);
   return d;
 }
 
-/* ── 改圖：gpt-image-2 edits（主路線）→ Responses API（備援）── */
-async function apiEdit(ak, pt, size, quality, format) {
-  // Step 1：壓縮並轉 PNG（確保 < 4MB）
-  const srcBlob = await compressToPng(files.s.b64, files.s.mime);
+/* ── 改圖：gpt-image-2 edits ── 
+   關鍵：GPT image 模型不接受 response_format，永遠回傳 b64_json
+   也不接受 output_format（edits 端點限制）
+*/
+async function apiEdit(ak,pt,size,quality) {
+  // 壓縮轉 PNG
+  const srcBlob=await compressToPng(files.s.b64, files.s.mime);
 
-  // Step 2：嘗試 gpt-image-2 edits
-  const fd = new FormData();
-  fd.append('model', 'gpt-image-2');
-  fd.append('prompt', pt);
-  fd.append('size', size);
-  fd.append('quality', quality);
-  fd.append('n', '1');
-  fd.append('response_format', 'b64_json');
-  fd.append('image', srcBlob, 'source.png');
-  if (files.m) {
-    // 遮罩也需要壓縮
-    const maskBlob = await compressToPng(files.m.b64, files.m.mime);
-    fd.append('mask', maskBlob, 'mask.png');
+  const fd=new FormData();
+  fd.append('model','gpt-image-2');
+  fd.append('prompt',pt);
+  fd.append('size',size);
+  fd.append('quality',quality);  // gpt-image-2 edits 支援 quality
+  fd.append('n','1');
+  // ❌ 不加 response_format：GPT image 模型不支援此參數
+  // ❌ 不加 output_format：edits 端點不支援
+  fd.append('image',srcBlob,'source.png');
+  if(files.m){
+    const maskBlob=await compressToPng(files.m.b64,files.m.mime);
+    fd.append('mask',maskBlob,'mask.png');
   }
 
-  const res = await fetch('https://api.openai.com/v1/images/edits', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${ak}` },
-    body: fd
+  const res=await fetch('https://api.openai.com/v1/images/edits',{
+    method:'POST',
+    headers:{'Authorization':`Bearer ${ak}`},
+    body:fd
   });
-  const d = await res.json();
-
-  if (!res.ok) {
-    const errMsg = d?.error?.message || '';
-    // 如果是 model 不支援的錯誤，走 Responses API 備援
-    if (errMsg.includes('dall-e-2') || errMsg.includes('model') || res.status === 400) {
-      console.warn('gpt-image-2 edits 不可用，改用 Responses API:', errMsg);
-      return await apiEditViaResponses(ak, pt, size, quality, srcBlob);
-    }
-    throw new Error(errMsg || `改圖失敗（${res.status}）`);
+  const d=await res.json();
+  if(!res.ok){
+    const msg=d?.error?.message||'';
+    throw new Error(
+      `改圖失敗：${msg||`HTTP ${res.status}`}\n\n` +
+      (msg.includes('dall-e-2')||msg.includes('model')
+        ? '此帳號的 gpt-image-2 edits 權限尚未開放（需要較高的 API tier）。'
+        : msg.includes('PNG')||msg.includes('4 MB')
+        ? '圖片轉換問題，請嘗試上傳更小的圖片。'
+        : '請確認 API Key 正確且帳號有足夠額度。')
+    );
   }
   return d.data; // [{ b64_json }]
 }
 
-/* ── 備援：Responses API + image_generation tool ── */
-async function apiEditViaResponses(ak, pt, size, quality, srcBlob) {
-  // 把 blob 轉 base64
-  const b64 = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(srcBlob);
-  });
-
-  const res = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ak}` },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      input: [{
-        role: 'user',
-        content: [
-          { type: 'input_image', image_url: `data:image/png;base64,${b64}` },
-          { type: 'input_text', text: pt }
-        ]
-      }],
-      tools: [{ type: 'image_generation', quality, size, action: 'edit' }]
-    })
-  });
-
-  const d = await res.json();
-  if (!res.ok) {
-    throw new Error(
-      `改圖失敗：${d?.error?.message || res.status}\n\n` +
-      `可能原因：\n` +
-      `① OpenAI 組織尚未完成 Individual 驗證\n` +
-      `② 帳號額度不足\n\n` +
-      `解決：前往 platform.openai.com/settings/organization/general 完成驗證`
-    );
-  }
-
-  // 從 output 中擷取圖片
-  const images = (d.output || [])
-    .filter(x => x.type === 'image_generation_call' && x.result)
-    .map(x => ({ b64_json: x.result }));
-
-  if (images.length === 0) {
-    throw new Error('改圖失敗：API 未回傳圖片，請確認 gpt-image-2 改圖權限已開通。');
-  }
-  return images;
-}
-
-function render(items, pt, size, quality, format, m) {
-  document.getElementById('es').style.display = 'none';
-  document.getElementById('rh').style.display = 'flex';
-  const grid = document.getElementById('grid');
-  const ts = new Date().toLocaleTimeString('zh-TW');
-  const mime = { jpeg:'image/jpeg', webp:'image/webp', png:'image/png' }[format] || 'image/png';
-  const badge = m === 'edit' ? '<span class="bg bg-e">改圖</span>' : '<span class="bg bg-g">生圖</span>';
-  items.forEach((item, i) => {
-    const src = `data:${mime};base64,${item.b64_json}`;
-    const fname = `gpt-image-${m}-${Date.now()}-${i+1}.${format}`;
-    const card = document.createElement('div');
-    card.className = 'ic';
-    card.innerHTML = `<img src="${src}" alt="generated" loading="lazy"><div class="cf"><div class="cm">${badge}${ts} · ${quality} · ${size.replace('x','×')}</div><div class="cbs"><a class="cb" href="${src}" download="${fname}">下載</a><button class="cb bl">送改圖</button></div></div>`;
-    card.querySelector('.cb.bl').addEventListener('click', () => loadEdit(src));
-    grid.insertBefore(card, grid.firstChild);
+/* ── render ── */
+function render(items,pt,size,quality,format,m) {
+  document.getElementById('es').style.display='none';
+  document.getElementById('rh').style.display='flex';
+  const grid=document.getElementById('grid');
+  const ts=new Date().toLocaleTimeString('zh-TW');
+  const mime={'jpeg':'image/jpeg','webp':'image/webp','png':'image/png'}[format]||'image/png';
+  const badge=m==='edit'?'<span class="bg bg-e">改圖</span>':'<span class="bg bg-g">生圖</span>';
+  items.forEach((item,i)=>{
+    const src=`data:${mime};base64,${item.b64_json}`;
+    const fname=`gpt-image-${m}-${Date.now()}-${i+1}.${format}`;
+    const card=document.createElement('div');
+    card.className='ic';
+    card.innerHTML=`<img src="${src}" alt="generated" loading="lazy"><div class="cf"><div class="cm">${badge}${ts} · ${quality} · ${size.replace('x','×')}</div><div class="cbs"><a class="cb" href="${src}" download="${fname}">下載</a><button class="cb bl">送改圖</button></div></div>`;
+    card.querySelector('.cb.bl').addEventListener('click',()=>loadEdit(src));
+    grid.insertBefore(card,grid.firstChild);
   });
 }
 
 function loadEdit(src) {
-  const [hd, b64] = src.split(',');
-  const mime = hd.match(/data:([^;]+)/)[1];
-  files.s = { b64, mime, size: b64.length * 0.75 };
+  const [hd,b64]=src.split(',');
+  const mime=hd.match(/data:([^;]+)/)[1];
+  files.s={b64,mime};
   sw('edit');
   document.getElementById('sz').classList.add('has');
-  document.getElementById('st').textContent = '已載入生成結果';
-  const p = document.getElementById('sp2'); p.src = src; p.style.display = 'block';
-  const h = document.getElementById('sizeHint');
-  if (h) h.textContent = '已從生成結果載入（PNG 格式）';
+  document.getElementById('st').textContent='已載入生成結果';
+  const p=document.getElementById('sp2'); p.src=src; p.style.display='block';
+  const h=document.getElementById('sizeHint'); if(h) h.textContent='已從生成結果載入（PNG 格式）';
 }
 
 function clrAll() {
-  document.getElementById('grid').innerHTML = '';
-  document.getElementById('es').style.display = 'flex';
-  document.getElementById('rh').style.display = 'none';
+  document.getElementById('grid').innerHTML='';
+  document.getElementById('es').style.display='flex';
+  document.getElementById('rh').style.display='none';
 }
 
-document.getElementById('pt').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) run();
+document.getElementById('pt').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)) run();
 });
 </script>
 </body>
