@@ -6,75 +6,56 @@
 <title>gpt-image-2 生圖工具</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --sw: 320px; --hh: 50px;
-    --bg: #f4f4f0; --sur: #fff; --bdr: #e5e5e5; --bdr2: #d0d0d0;
-    --tx: #1a1a1a; --mu: #888; --fa: #bbb;
-    --gr: #2d7d46; --bl: #185fa5; --rd: #c0392b;
-    --ibg: #fafafa;
-  }
+  :root { --sw:320px; --hh:50px; --bg:#f4f4f0; --sur:#fff; --bd:#e5e5e5; --bd2:#d0d0d0; --tx:#1a1a1a; --mu:#888; --fa:#bbb; --gr:#2d7d46; --bl:#185fa5; --rd:#c0392b; --ib:#fafafa; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--tx); min-height: 100vh; }
 
-  /* header */
-  .hdr { height: var(--hh); background: var(--sur); border-bottom: 1px solid var(--bdr); display: flex; align-items: center; padding: 0 16px; gap: 10px; position: sticky; top: 0; z-index: 100; }
+  .hdr { height: var(--hh); background: var(--sur); border-bottom: 1px solid var(--bd); display: flex; align-items: center; padding: 0 16px; gap: 10px; position: sticky; top: 0; z-index: 100; }
   .logo { width: 28px; height: 28px; background: var(--tx); border-radius: 6px; display: grid; place-items: center; flex-shrink: 0; }
   .logo svg { width: 14px; height: 14px; }
   .hdr h1 { font-size: 14px; font-weight: 600; }
   .hdr .sub { font-size: 11px; color: var(--fa); }
-  .menu-btn { display: none; margin-left: auto; background: none; border: none; cursor: pointer; padding: 6px; color: var(--tx); }
+  .mbtn { display: none; margin-left: auto; background: none; border: none; cursor: pointer; padding: 6px; color: var(--tx); }
 
-  /* layout */
   .lay { display: flex; height: calc(100vh - var(--hh)); }
-
-  /* sidebar */
-  .sb { width: var(--sw); background: var(--sur); border-right: 1px solid var(--bdr); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.25s ease; }
-  .tabs { display: flex; border-bottom: 1px solid var(--bdr); flex-shrink: 0; }
-  .tab { flex: 1; padding: 10px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; border: none; background: none; color: var(--mu); border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .sb { width: var(--sw); background: var(--sur); border-right: 1px solid var(--bd); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.25s; }
+  .tabs { display: flex; border-bottom: 1px solid var(--bd); flex-shrink: 0; }
+  .tab { flex: 1; padding: 10px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; border: none; background: none; color: var(--mu); border-bottom: 2px solid transparent; }
   .tab.on { color: var(--tx); border-bottom-color: var(--tx); }
   .tab:hover:not(.on) { background: #f8f8f8; }
   .sbb { padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; }
 
-  /* form elements */
   .lbl { font-size: 10px; font-weight: 600; color: var(--fa); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
   .kw { position: relative; }
-  .kw input { width: 100%; padding: 8px 32px 8px 10px; border: 1px solid var(--bdr2); border-radius: 7px; font-size: 12px; font-family: monospace; background: var(--ibg); color: var(--tx); outline: none; }
+  .kw input { width: 100%; padding: 8px 32px 8px 10px; border: 1px solid var(--bd2); border-radius: 7px; font-size: 12px; font-family: monospace; background: var(--ib); color: var(--tx); outline: none; }
   .kw input:focus { border-color: var(--tx); background: var(--sur); }
   .eye { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--fa); font-size: 12px; }
-  .ks { font-size: 11px; margin-top: 4px; }
-  .ks.ok { color: var(--gr); } .ks.err { color: var(--rd); }
-  textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--bdr2); border-radius: 7px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 80px; background: var(--ibg); color: var(--tx); outline: none; line-height: 1.5; }
+  .ks { font-size: 11px; margin-top: 4px; } .ks.ok { color: var(--gr); } .ks.err { color: var(--rd); }
+  textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--bd2); border-radius: 7px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 80px; background: var(--ib); color: var(--tx); outline: none; line-height: 1.5; }
   textarea:focus { border-color: var(--tx); background: var(--sur); }
   .og { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .op label { display: block; font-size: 11px; color: var(--mu); margin-bottom: 3px; font-weight: 500; }
-  .op select { width: 100%; padding: 6px 24px 6px 8px; border: 1px solid var(--bdr2); border-radius: 6px; font-size: 12px; background: var(--ibg) url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") no-repeat right 8px center; color: var(--tx); outline: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
-  .op select:focus { border-color: var(--tx); }
+  .op select { width: 100%; padding: 6px 24px 6px 8px; border: 1px solid var(--bd2); border-radius: 6px; font-size: 12px; background: var(--ib) url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") no-repeat right 8px center; color: var(--tx); outline: none; cursor: pointer; -webkit-appearance: none; appearance: none; }
   .op.dim { opacity: 0.4; pointer-events: none; }
 
-  /* upload */
-  .uz { border: 1.5px dashed var(--bdr2); border-radius: 8px; padding: 12px; text-align: center; position: relative; background: var(--ibg); transition: all 0.15s; cursor: pointer; }
+  .uz { border: 1.5px dashed var(--bd2); border-radius: 8px; padding: 12px; text-align: center; position: relative; background: var(--ib); cursor: pointer; }
   .uz:hover { border-color: #aaa; background: #f0f0ed; }
   .uz.has { border-color: var(--gr); background: #f0faf3; border-style: solid; }
   .uz input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-  .ui { font-size: 18px; }
-  .ut { font-size: 12px; color: var(--mu); margin-top: 3px; }
-  .uz.has .ut { color: var(--gr); font-weight: 500; }
+  .ui { font-size: 18px; } .ut { font-size: 12px; color: var(--mu); margin-top: 3px; } .uz.has .ut { color: var(--gr); font-weight: 500; }
   .up { width: 100%; max-height: 90px; object-fit: contain; margin-top: 8px; border-radius: 5px; display: none; }
-  .ucl { position: absolute; top: 5px; right: 5px; background: var(--sur); border: 1px solid var(--bdr2); border-radius: 4px; font-size: 10px; padding: 2px 6px; cursor: pointer; color: var(--mu); z-index: 2; display: none; }
+  .ucl { position: absolute; top: 5px; right: 5px; background: var(--sur); border: 1px solid var(--bd2); border-radius: 4px; font-size: 10px; padding: 2px 6px; cursor: pointer; color: var(--mu); z-index: 2; display: none; }
   .uz.has .ucl { display: block; }
   .hint { font-size: 11px; color: var(--fa); line-height: 1.5; margin-top: 4px; }
 
-  /* edit method info box */
-  .info-box { font-size: 11px; background: #eaf2fb; border: 1px solid #b8d4f0; border-radius: 6px; padding: 7px 10px; color: #185fa5; line-height: 1.6; }
-  .info-box strong { color: #0c447c; }
+  /* 改圖狀態顯示 */
+  .edit-status { font-size: 11px; padding: 7px 10px; border-radius: 6px; line-height: 1.6; }
+  .edit-status.info { background: #eaf2fb; border: 1px solid #b8d4f0; color: #185fa5; }
+  .edit-status.warn { background: #fef9e7; border: 1px solid #f9e07a; color: #7d6608; }
 
   .costbox { font-size: 11px; color: var(--mu); background: var(--bg); padding: 7px 9px; border-radius: 6px; line-height: 1.6; }
   .costbox strong { color: var(--tx); }
-
-  /* button */
   .runbtn { width: 100%; padding: 11px; background: var(--tx); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
-  .runbtn:hover { background: #333; }
-  .runbtn:active { transform: scale(0.98); }
-  .runbtn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+  .runbtn:hover { background: #333; } .runbtn:active { transform: scale(0.98); } .runbtn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
   .sp { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; flex-shrink: 0; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .pb { height: 3px; background: #eee; border-radius: 2px; overflow: hidden; margin-top: 6px; display: none; }
@@ -82,7 +63,6 @@
   .pf { height: 100%; background: var(--tx); border-radius: 2px; animation: pg 20s ease-out forwards; }
   @keyframes pg { from { width: 0; } to { width: 88%; } }
 
-  /* canvas */
   .cv { flex: 1; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .es { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ccc; gap: 10px; min-height: 300px; }
   .es svg { width: 40px; height: 40px; }
@@ -92,27 +72,23 @@
   .ca { font-size: 11px; color: var(--fa); background: none; border: none; cursor: pointer; padding: 3px 7px; border-radius: 5px; }
   .ca:hover { background: #eee; color: var(--mu); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-  .ic { background: var(--sur); border-radius: 10px; overflow: hidden; border: 1px solid var(--bdr); }
+  .ic { background: var(--sur); border-radius: 10px; overflow: hidden; border: 1px solid var(--bd); }
   .ic img { width: 100%; display: block; }
   .cf { padding: 8px 10px; display: flex; align-items: center; gap: 6px; border-top: 1px solid #f2f2f2; }
   .cm { font-size: 10px; color: var(--fa); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cbs { display: flex; gap: 4px; flex-shrink: 0; }
-  .cb { padding: 4px 8px; border: 1px solid var(--bdr); border-radius: 5px; font-size: 11px; cursor: pointer; background: var(--sur); color: var(--tx); text-decoration: none; white-space: nowrap; }
+  .cb { padding: 4px 8px; border: 1px solid var(--bd); border-radius: 5px; font-size: 11px; cursor: pointer; background: var(--sur); color: var(--tx); text-decoration: none; white-space: nowrap; }
   .cb:hover { background: var(--bg); }
-  .cb.bl { border-color: #b8d4f0; color: var(--bl); }
-  .cb.bl:hover { background: #eaf2fb; }
+  .cb.bl { border-color: #b8d4f0; color: var(--bl); } .cb.bl:hover { background: #eaf2fb; }
   .bg { display: inline-block; padding: 2px 5px; border-radius: 3px; font-size: 9px; font-weight: 700; margin-right: 3px; }
-  .bg-g { background: #eaf3de; color: #3b6d11; }
-  .bg-e { background: #e6f1fb; color: var(--bl); }
-
-  .eb { background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; padding: 9px 12px; font-size: 12px; color: var(--rd); margin-bottom: 12px; display: none; line-height: 1.5; }
+  .bg-g { background: #eaf3de; color: #3b6d11; } .bg-e { background: #e6f1fb; color: var(--bl); }
+  .eb { background: #fef2f2; border: 1px solid #fecaca; border-radius: 7px; padding: 9px 12px; font-size: 12px; color: var(--rd); margin-bottom: 12px; display: none; line-height: 1.6; white-space: pre-line; }
   .eb.on { display: block; }
   .ov { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 90; }
 
-  /* responsive */
   @media (max-width: 680px) {
     :root { --sw: 85vw; }
-    .menu-btn { display: flex; align-items: center; }
+    .mbtn { display: flex; align-items: center; }
     .sb { position: fixed; top: var(--hh); left: 0; height: calc(100vh - var(--hh)); z-index: 95; transform: translateX(-100%); box-shadow: 4px 0 20px rgba(0,0,0,0.15); }
     .sb.open { transform: translateX(0); }
     .ov.on { display: block; }
@@ -132,11 +108,10 @@
   </div>
   <h1>gpt-image-2 生圖工具</h1>
   <span class="sub">OpenAI API</span>
-  <button class="menu-btn" onclick="toggleMenu()" aria-label="選單">
+  <button class="mbtn" onclick="toggleMenu()" aria-label="選單">
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="2" y1="4.5" x2="16" y2="4.5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13.5" x2="16" y2="13.5"/></svg>
   </button>
 </div>
-
 <div class="ov" id="ov" onclick="toggleMenu()"></div>
 
 <div class="lay">
@@ -146,18 +121,11 @@
       <button class="tab" id="tE" onclick="sw('edit')">✎ 改圖</button>
     </div>
     <div class="sbb">
-
-      <!-- API Key -->
       <div>
         <div class="lbl">OpenAI API Key</div>
-        <div class="kw">
-          <input type="password" id="ak" placeholder="sk-..." autocomplete="off">
-          <button class="eye" onclick="toggleEye()">👁</button>
-        </div>
+        <div class="kw"><input type="password" id="ak" placeholder="sk-..." autocomplete="off"><button class="eye" onclick="toggleEye()">👁</button></div>
         <div class="ks" id="ks"></div>
       </div>
-
-      <!-- Prompt -->
       <div>
         <div class="lbl" id="pl">圖片描述</div>
         <textarea id="pt" placeholder="畫一隻穿西裝的龍蝦，扁平插畫風格..."></textarea>
@@ -171,12 +139,10 @@
           <button class="ucl" onclick="cf(event,'s')">✕ 清除</button>
           <div class="ui">🖼</div>
           <div class="ut" id="st">點擊上傳 PNG / JPEG / WebP</div>
-          <img class="up" id="sp">
+          <img class="up" id="sp2">
         </div>
-        <p class="hint">非 PNG 自動轉換。</p>
+        <p class="hint" id="sizeHint">自動壓縮至 4MB 以下。</p>
       </div>
-
-      <!-- 改圖：遮罩 -->
       <div id="ms" class="hidden">
         <div class="lbl">遮罩 <span style="color:#aaa;font-weight:400">選填</span></div>
         <div class="uz" id="mz">
@@ -186,16 +152,15 @@
           <div class="ut" id="mt">黑色保留 / 白色替換（PNG）</div>
           <img class="up" id="mp">
         </div>
-        <p class="hint">不上傳時對整張圖改圖。</p>
+        <p class="hint">需有 alpha 通道（透明遮罩）。</p>
       </div>
 
-      <!-- 改圖方式說明 -->
-      <div id="editInfo" class="info-box hidden">
-        <strong>改圖使用 Responses API</strong><br>
-        gpt-image-2 原生支援，效果優於舊版 edits 端點。
+      <!-- 改圖方式 -->
+      <div id="editInfo" class="edit-status info hidden">
+        <strong>改圖端點：gpt-image-2 edits</strong><br>
+        圖片會自動轉 PNG 並壓縮至 4MB 以下。
       </div>
 
-      <!-- 選項 -->
       <div>
         <div class="lbl">選項</div>
         <div class="og">
@@ -235,13 +200,11 @@
       </div>
 
       <div class="costbox" id="cb2">預估費用：<strong>~NT$0.3</strong>（1 張 × low）</div>
-
       <button class="runbtn" id="rb" onclick="run()">
-        <div class="sp" id="sp2"></div>
+        <div class="sp" id="sp3"></div>
         <span id="rt">生成圖片</span>
       </button>
       <div class="pb" id="pb"><div class="pf"></div></div>
-
     </div>
   </div>
 
@@ -262,51 +225,79 @@
 <script>
 const COST = { low: 0.3, medium: 1.3, high: 5.5 };
 let mode = 'gen';
-let files = { s: null, m: null };
+let files = { s: null, m: null }; // { b64, mime, originalSize }
 
-function toggleMenu() {
-  document.getElementById('sb').classList.toggle('open');
-  document.getElementById('ov').classList.toggle('on');
-}
-function closeMenu() {
-  document.getElementById('sb').classList.remove('open');
-  document.getElementById('ov').classList.remove('on');
-}
+function toggleMenu() { document.getElementById('sb').classList.toggle('open'); document.getElementById('ov').classList.toggle('on'); }
+function closeMenu() { document.getElementById('sb').classList.remove('open'); document.getElementById('ov').classList.remove('on'); }
 
-/* ── mode ── */
 function sw(m) {
   mode = m;
   document.getElementById('tG').classList.toggle('on', m === 'gen');
   document.getElementById('tE').classList.toggle('on', m === 'edit');
-  document.getElementById('ss').classList.toggle('hidden', m !== 'edit');
-  document.getElementById('ms').classList.toggle('hidden', m !== 'edit');
-  document.getElementById('editInfo').classList.toggle('hidden', m !== 'edit');
+  ['ss','ms','editInfo'].forEach(id => document.getElementById(id).classList.toggle('hidden', m !== 'edit'));
   document.getElementById('pl').textContent = m === 'edit' ? '改圖指令' : '圖片描述';
-  document.getElementById('pt').placeholder = m === 'edit'
-    ? '把背景換成海底世界，保留前景主體...' : '畫一隻穿西裝的龍蝦，扁平插畫風格...';
+  document.getElementById('pt').placeholder = m === 'edit' ? '把背景換成海底世界，保留前景主體...' : '畫一隻穿西裝的龍蝦，扁平插畫風格...';
   document.getElementById('rt').textContent = m === 'edit' ? '開始改圖' : '生成圖片';
-  // 改圖：quality 仍支援（Responses API 有 quality 參數）；張數鎖定 1
   const co = document.getElementById('co');
-  if (m === 'edit') {
-    co.classList.add('dim');
-    document.getElementById('ct').value = '1';
-  } else {
-    co.classList.remove('dim');
-  }
+  if (m === 'edit') { co.classList.add('dim'); document.getElementById('ct').value = '1'; }
+  else co.classList.remove('dim');
   uc();
 }
 
-/* ── file ── */
+/* ── 圖片壓縮：確保 PNG < 4MB ── */
+async function compressToPng(b64, mime, maxBytes = 3.8 * 1024 * 1024) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      // 逐步縮小直到 < 4MB
+      const tryRender = (scale) => {
+        canvas.width = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          if (!blob) { rej(new Error('圖片轉換失敗')); return; }
+          if (blob.size <= maxBytes || scale <= 0.1) {
+            // 更新 hint
+            const kb = (blob.size / 1024).toFixed(0);
+            const hint = document.getElementById('sizeHint');
+            if (hint) hint.textContent = scale < 1
+              ? `已壓縮：${canvas.width}×${canvas.height}px，${kb}KB`
+              : `${canvas.width}×${canvas.height}px，${kb}KB（無需壓縮）`;
+            res(blob);
+          } else {
+            tryRender(scale * 0.8);
+          }
+        }, 'image/png');
+      };
+      tryRender(1.0);
+    };
+    img.onerror = () => rej(new Error('無法讀取圖片'));
+    img.src = `data:${mime};base64,${b64}`;
+  });
+}
+
 function hf(type, input) {
   const file = input.files[0]; if (!file) return;
   const r = new FileReader();
   r.onload = e => {
-    files[type] = { b64: e.target.result.split(',')[1], mime: file.type };
-    const z = document.getElementById(type === 's' ? 'sz' : 'mz');
-    z.classList.add('has');
+    const b64 = e.target.result.split(',')[1];
+    files[type] = { b64, mime: file.type, size: file.size };
+    const id = type === 's' ? 'sz' : 'mz';
+    document.getElementById(id).classList.add('has');
     document.getElementById(type + 't').textContent = file.name.length > 26 ? file.name.slice(0,24)+'…' : file.name;
-    const p = document.getElementById(type + 'p');
+    const p = document.getElementById(type === 's' ? 'sp2' : 'mp');
     p.src = e.target.result; p.style.display = 'block';
+    if (type === 's') {
+      const kb = (file.size / 1024).toFixed(0);
+      const hint = document.getElementById('sizeHint');
+      if (hint) hint.textContent = file.size > 3.8*1024*1024
+        ? `⚠️ ${kb}KB，將自動壓縮至 4MB 以下` : `${kb}KB（無需壓縮）`;
+    }
   };
   r.readAsDataURL(file);
 }
@@ -316,10 +307,10 @@ function cf(e, type) {
   document.getElementById(type === 's' ? 'sf' : 'mf').value = '';
   document.getElementById(type === 's' ? 'sz' : 'mz').classList.remove('has');
   document.getElementById(type + 't').textContent = type === 's' ? '點擊上傳 PNG / JPEG / WebP' : '黑色保留 / 白色替換（PNG）';
-  const p = document.getElementById(type + 'p'); p.src = ''; p.style.display = 'none';
+  const p = document.getElementById(type === 's' ? 'sp2' : 'mp'); p.src = ''; p.style.display = 'none';
+  if (type === 's') { const h = document.getElementById('sizeHint'); if (h) h.textContent = '自動壓縮至 4MB 以下。'; }
 }
 
-/* ── api key ── */
 function toggleEye() { const i = document.getElementById('ak'); i.type = i.type === 'password' ? 'text' : 'password'; }
 document.getElementById('ak').addEventListener('input', function() {
   const v = this.value.trim(), el = document.getElementById('ks');
@@ -330,49 +321,32 @@ document.getElementById('ak').addEventListener('input', function() {
   localStorage.setItem('oai_key', v);
 });
 
-/* ── cost ── */
 function uc() {
-  const q = document.getElementById('ql').value;
-  const n = mode === 'edit' ? 1 : parseInt(document.getElementById('ct').value);
-  document.getElementById('cb2').innerHTML = mode === 'edit'
-    ? `預估費用：<strong>~NT$${(COST[q]).toFixed(1)}</strong>（改圖 × ${q}，Responses API）`
-    : `預估費用：<strong>~NT$${(COST[q]*n).toFixed(1)}</strong>（${n} 張 × ${q}）`;
+  const q = document.getElementById('ql').value, n = mode === 'edit' ? 1 : parseInt(document.getElementById('ct').value);
+  document.getElementById('cb2').innerHTML = `預估費用：<strong>~NT$${(COST[q]*(mode==='edit'?1:n)).toFixed(1)}</strong>（${mode==='edit'?'改圖 × ':''}${n} 張 × ${q}）`;
 }
 document.getElementById('ct').addEventListener('change', uc);
 document.getElementById('ql').addEventListener('change', uc);
-
-window.onload = () => {
-  const s = localStorage.getItem('oai_key');
-  if (s) { document.getElementById('ak').value = s; document.getElementById('ks').textContent = '已載入上次的 Key'; document.getElementById('ks').className = 'ks ok'; }
-};
+window.onload = () => { const s = localStorage.getItem('oai_key'); if (s) { document.getElementById('ak').value = s; document.getElementById('ks').textContent = '已載入上次的 Key'; document.getElementById('ks').className = 'ks ok'; } };
 
 function showErr(msg) {
   const b = document.getElementById('eb'); b.textContent = msg; b.classList.add('on');
-  setTimeout(() => b.classList.remove('on'), 12000);
+  setTimeout(() => b.classList.remove('on'), 15000);
 }
 function setLoad(on) {
   document.getElementById('rb').disabled = on;
-  document.getElementById('sp2').style.display = on ? 'block' : 'none';
+  document.getElementById('sp3').style.display = on ? 'block' : 'none';
   document.getElementById('rt').textContent = on ? (mode === 'edit' ? '改圖中...' : '生成中...') : (mode === 'edit' ? '開始改圖' : '生成圖片');
   const pb = document.getElementById('pb');
   if (on) { pb.classList.add('on'); pb.innerHTML = '<div class="pf"></div>'; } else pb.classList.remove('on');
 }
 
 function b64Blob(b64, mime) {
-  const b = atob(b64), a = new Uint8Array(b.length);
-  for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
-  return new Blob([a], { type: mime });
-}
-function toPng(b64, mime) {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; c.getContext('2d').drawImage(img, 0, 0); c.toBlob(b => b ? res(b) : rej(new Error('PNG 轉換失敗')), 'image/png'); };
-    img.onerror = () => rej(new Error('無法讀取圖片'));
-    img.src = `data:${mime};base64,${b64}`;
-  });
+  const bytes = atob(b64), arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
 }
 
-/* ── run ── */
 async function run() {
   const ak = document.getElementById('ak').value.trim();
   const pt = document.getElementById('pt').value.trim();
@@ -387,20 +361,18 @@ async function run() {
 
   setLoad(true); closeMenu();
   try {
-    let data;
     if (mode === 'gen') {
-      data = await apiGen(ak, pt, size, quality, n, format);
-      render(data.images || data.data, pt, size, quality, format, 'gen');
+      const data = await apiGen(ak, pt, size, quality, n, format);
+      render(data.data, pt, size, quality, format, 'gen');
     } else {
-      // Responses API：支援 gpt-image-2 的改圖（官方推薦）
-      data = await apiEditResponses(ak, pt, size, quality, format);
+      const data = await apiEdit(ak, pt, size, quality, format);
       render(data, pt, size, quality, format, 'edit');
     }
   } catch(e) { showErr(e.message); }
   finally { setLoad(false); }
 }
 
-/* ── 生圖：Image API /v1/images/generations ── */
+/* ── 生圖 ── */
 async function apiGen(ak, pt, size, quality, n, format) {
   const res = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
@@ -412,96 +384,25 @@ async function apiGen(ak, pt, size, quality, n, format) {
   return d;
 }
 
-/* ── 改圖：Responses API /v1/responses（支援 gpt-image-2 原生改圖）── */
-async function apiEditResponses(ak, pt, size, quality, format) {
-  // 把圖片轉成 base64 data URL 格式放入 content
-  const srcMime = files.s.mime;
-  const srcBlob = srcMime === 'image/png'
-    ? b64Blob(files.s.b64, 'image/png')
-    : await toPng(files.s.b64, srcMime);
+/* ── 改圖：gpt-image-2 edits（主路線）→ Responses API（備援）── */
+async function apiEdit(ak, pt, size, quality, format) {
+  // Step 1：壓縮並轉 PNG（確保 < 4MB）
+  const srcBlob = await compressToPng(files.s.b64, files.s.mime);
 
-  // 把 Blob 轉成 base64
-  const srcB64 = await new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result.split(',')[1]);
-    r.onerror = rej;
-    r.readAsDataURL(srcBlob);
-  });
-
-  // 建立 content array：先放圖，再放文字指令
-  const content = [
-    {
-      type: 'input_image',
-      source: { type: 'base64', media_type: 'image/png', data: srcB64 }
-    },
-    { type: 'input_text', text: pt }
-  ];
-
-  // 如果有遮罩，加入第二張圖（作為遮罩參考）
-  if (files.m) {
-    content.push({
-      type: 'input_image',
-      source: { type: 'base64', media_type: 'image/png', data: files.m.b64 }
-    });
-    content[1].text = pt + '\n\n（白色區域為需要改動的區域，黑色區域請保留）';
-  }
-
-  const sizeMap = { 'png': 'png', 'jpeg': 'jpeg', 'webp': 'webp' };
-
-  const res = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ak}` },
-    body: JSON.stringify({
-      model: 'gpt-4o',  // Responses API 用 gpt-4o 呼叫 image_generation tool
-      input: [{ role: 'user', content }],
-      tools: [{
-        type: 'image_generation',
-        quality,
-        size,
-        output_format: format
-      }]
-    })
-  });
-
-  const d = await res.json();
-  if (!res.ok) {
-    // Responses API 失敗時 fallback 到舊版 edits（dall-e-2）
-    console.warn('Responses API 失敗，嘗試 dall-e-2 edits fallback:', d?.error?.message);
-    return await apiEditFallback(ak, pt, size, format);
-  }
-
-  // 從 Responses API output 中找到圖片
-  const images = [];
-  if (d.output) {
-    for (const item of d.output) {
-      if (item.type === 'image_generation_call' && item.result) {
-        images.push({ b64_json: item.result });
-      }
-    }
-  }
-  if (images.length === 0) {
-    // 再試 fallback
-    return await apiEditFallback(ak, pt, size, format);
-  }
-  return images;
-}
-
-/* ── 改圖 fallback：dall-e-2 edits（舊端點）── */
-async function apiEditFallback(ak, pt, size, format) {
-  const srcBlob = files.s.mime === 'image/png'
-    ? b64Blob(files.s.b64, 'image/png')
-    : await toPng(files.s.b64, files.s.mime);
-
+  // Step 2：嘗試 gpt-image-2 edits
   const fd = new FormData();
-  fd.append('model', 'dall-e-2');  // edits 端點只支援 dall-e-2
+  fd.append('model', 'gpt-image-2');
   fd.append('prompt', pt);
-  // dall-e-2 edits 只支援 256x256 / 512x512 / 1024x1024
-  const safeSize = '1024x1024';
-  fd.append('size', safeSize);
+  fd.append('size', size);
+  fd.append('quality', quality);
   fd.append('n', '1');
   fd.append('response_format', 'b64_json');
   fd.append('image', srcBlob, 'source.png');
-  if (files.m) fd.append('mask', b64Blob(files.m.b64, 'image/png'), 'mask.png');
+  if (files.m) {
+    // 遮罩也需要壓縮
+    const maskBlob = await compressToPng(files.m.b64, files.m.mime);
+    fd.append('mask', maskBlob, 'mask.png');
+  }
 
   const res = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST',
@@ -509,11 +410,67 @@ async function apiEditFallback(ak, pt, size, format) {
     body: fd
   });
   const d = await res.json();
-  if (!res.ok) throw new Error(`改圖失敗：${d?.error?.message || res.status}\n\n提示：請確認 OpenAI 組織已完成 Individual 驗證。`);
+
+  if (!res.ok) {
+    const errMsg = d?.error?.message || '';
+    // 如果是 model 不支援的錯誤，走 Responses API 備援
+    if (errMsg.includes('dall-e-2') || errMsg.includes('model') || res.status === 400) {
+      console.warn('gpt-image-2 edits 不可用，改用 Responses API:', errMsg);
+      return await apiEditViaResponses(ak, pt, size, quality, srcBlob);
+    }
+    throw new Error(errMsg || `改圖失敗（${res.status}）`);
+  }
   return d.data; // [{ b64_json }]
 }
 
-/* ── render ── */
+/* ── 備援：Responses API + image_generation tool ── */
+async function apiEditViaResponses(ak, pt, size, quality, srcBlob) {
+  // 把 blob 轉 base64
+  const b64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(srcBlob);
+  });
+
+  const res = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ak}` },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      input: [{
+        role: 'user',
+        content: [
+          { type: 'input_image', image_url: `data:image/png;base64,${b64}` },
+          { type: 'input_text', text: pt }
+        ]
+      }],
+      tools: [{ type: 'image_generation', quality, size, action: 'edit' }]
+    })
+  });
+
+  const d = await res.json();
+  if (!res.ok) {
+    throw new Error(
+      `改圖失敗：${d?.error?.message || res.status}\n\n` +
+      `可能原因：\n` +
+      `① OpenAI 組織尚未完成 Individual 驗證\n` +
+      `② 帳號額度不足\n\n` +
+      `解決：前往 platform.openai.com/settings/organization/general 完成驗證`
+    );
+  }
+
+  // 從 output 中擷取圖片
+  const images = (d.output || [])
+    .filter(x => x.type === 'image_generation_call' && x.result)
+    .map(x => ({ b64_json: x.result }));
+
+  if (images.length === 0) {
+    throw new Error('改圖失敗：API 未回傳圖片，請確認 gpt-image-2 改圖權限已開通。');
+  }
+  return images;
+}
+
 function render(items, pt, size, quality, format, m) {
   document.getElementById('es').style.display = 'none';
   document.getElementById('rh').style.display = 'flex';
@@ -521,7 +478,6 @@ function render(items, pt, size, quality, format, m) {
   const ts = new Date().toLocaleTimeString('zh-TW');
   const mime = { jpeg:'image/jpeg', webp:'image/webp', png:'image/png' }[format] || 'image/png';
   const badge = m === 'edit' ? '<span class="bg bg-e">改圖</span>' : '<span class="bg bg-g">生圖</span>';
-
   items.forEach((item, i) => {
     const src = `data:${mime};base64,${item.b64_json}`;
     const fname = `gpt-image-${m}-${Date.now()}-${i+1}.${format}`;
@@ -536,11 +492,13 @@ function render(items, pt, size, quality, format, m) {
 function loadEdit(src) {
   const [hd, b64] = src.split(',');
   const mime = hd.match(/data:([^;]+)/)[1];
-  files.s = { b64, mime };
+  files.s = { b64, mime, size: b64.length * 0.75 };
   sw('edit');
   document.getElementById('sz').classList.add('has');
   document.getElementById('st').textContent = '已載入生成結果';
-  const p = document.getElementById('sp'); p.src = src; p.style.display = 'block';
+  const p = document.getElementById('sp2'); p.src = src; p.style.display = 'block';
+  const h = document.getElementById('sizeHint');
+  if (h) h.textContent = '已從生成結果載入（PNG 格式）';
 }
 
 function clrAll() {
