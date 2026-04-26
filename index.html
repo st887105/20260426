@@ -193,7 +193,6 @@
     </div>
     <div class="sbb">
 
-      <!-- OpenAI Key -->
       <div>
         <div class="lbl">OpenAI API Key</div>
         <div class="kw">
@@ -203,13 +202,11 @@
         <div class="ks" id="ks"></div>
       </div>
 
-      <!-- Prompt -->
       <div>
         <div class="lbl" id="pl">圖片描述</div>
         <textarea id="pt" placeholder="畫一隻穿西裝的龍蝦，扁平插畫風格..."></textarea>
       </div>
 
-      <!-- Source image (edit mode) -->
       <div id="ss" class="hidden">
         <div class="lbl">來源圖片 <span style="color:#e55;font-weight:400">必填</span></div>
         <div class="uz" id="sz">
@@ -238,7 +235,6 @@
         圖片自動壓縮至 4MB 以下。
       </div>
 
-      <!-- Options -->
       <div>
         <div class="lbl">選項</div>
         <div class="og">
@@ -279,7 +275,6 @@
 
       <div class="costbox" id="cb2">預估費用：<strong>~NT$0.3</strong>（1 張 × low）</div>
 
-      <!-- ── Google Drive Panel ── -->
       <div class="drive-panel">
         <div class="drive-header">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4.5 20L1 14l5-8h6L7 14H4.5V20z" fill="#1fa463"/><path d="M14 20H4.5v-6H7l5-8h6l-4 8h4.5L14 20z" fill="#4285f4" opacity="0.7"/><path d="M19.5 14L23 20H14l4.5-6H23" fill="#fbbc05" opacity="0.9"/><path d="M7 6h6l-5 8H7V6z" fill="#1fa463"/><path d="M13 6h6l-4 8h-6l4-8z" fill="#4285f4"/><path d="M19 14l-4.5 6h6L23 14h-4z" fill="#fbbc05"/></svg>
@@ -291,7 +286,7 @@
           <div style="font-size:12px;color:var(--mu);line-height:1.6;margin-bottom:8px;">連接後可自動儲存每張生成圖，並在「雲端紀錄」頁面瀏覽歷史。</div>
           <div style="margin-bottom:8px;">
             <div class="lbl">Google Client ID</div>
-            <input type="text" id="gcid" placeholder="885656276661-pq6j9pengshvf4ifio4ou7i1ucu0j70f.apps.googleusercontent.com" autocomplete="off">
+            <input type="text" id="gcid" value="885656276661-pq6j9pengshvf4ifio4ou7i1ucu0j70f.apps.googleusercontent.com" placeholder="xxxxx.apps.googleusercontent.com" autocomplete="off">
             <div class="hint" style="margin-top:4px;">需要在 <a href="https://console.cloud.google.com/" target="_blank" style="color:var(--bl)">Google Cloud Console</a> 建立 OAuth 2.0 憑證（Web Application），並加入此頁面的網址為允許來源。</div>
           </div>
           <div style="margin-bottom:8px;">
@@ -321,14 +316,12 @@
     </div>
   </div>
 
-  <!-- Main content area -->
   <div class="cv" id="cvArea">
     <div class="cv-tabs">
       <button class="cv-tab on" onclick="showCvTab('local')" id="cvTabLocal">本次結果</button>
       <button class="cv-tab" onclick="showCvTab('drive')" id="cvTabDrive">☁ 雲端紀錄</button>
     </div>
 
-    <!-- Local results -->
     <div id="localPanel">
       <div class="rh" id="rh" style="display:none">
         <h2>生成結果</h2>
@@ -342,7 +335,6 @@
       <div class="grid" id="grid"></div>
     </div>
 
-    <!-- Drive history -->
     <div id="drivePanel">
       <div class="rh">
         <h2 id="drivePanelTitle">雲端紀錄</h2>
@@ -358,7 +350,6 @@
   </div>
 </div>
 
-<!-- Lightbox -->
 <div class="lb" id="lb" onclick="closeLb(event)">
   <div class="lb-inner" id="lbInner">
     <button class="lb-close" onclick="closeLb()">✕</button>
@@ -370,7 +361,6 @@
   </div>
 </div>
 
-<!-- Google Identity Services -->
 <script src="https://accounts.google.com/gsi/client" async></script>
 
 <script>
